@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>โปรแกรมแปลงภาพสไตล์มังงะ - การประมวลผล</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .images {
+            display: flex;
+            justify-content: space-around;
+            width: 90%;
+            margin: 20px 0;
+        }
+        .images img {
+            max-width: 45%;
+            height: auto;
+            border: 1px solid #ccc;
+        }
+        .controls {
+            width: 90%;
+        }
+        .controls form {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .control-group {
+            margin: 10px;
+            flex: 1 1 45%;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .control-group input,
+        .control-group select {
+            width: 100%;
+            padding: 5px;
+        }
+        .submit-button {
+            text-align: center;
+            width: 100%;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>โปรแกรมแปลงภาพสไตล์มังงะ - การประมวลผล</h1>
+        <div class="images">
+            <div>
+                <h3>ภาพต้นฉบับ</h3>
+                <img src="data:image/png;base64,{{ original_image }}" alt="Original Image">
+            </div>
+            <div>
+                <h3>ภาพที่ประมวลผล</h3>
+                <img src="data:image/png;base64,{{ processed_image }}" alt="Processed Image">
+            </div>
+        </div>
+        <div class="controls">
+            <form method="post">
+                <!-- พารามิเตอร์พื้นฐาน -->
+                <div class="control-group">
+                    <label for="threshold">Threshold ({{ parameters.get('threshold', 128) }})</label>
+                    <input type="range" id="threshold" name="threshold" min="0" max="255" value="{{ parameters.get('threshold', 128) }}">
+                </div>
+                <div class="control-group">
+                    <label for="contrast">Contrast ({{ parameters.get('contrast', 1.0) }})</label>
+                    <input type="range" id="contrast" name="contrast" min="0.5" max="3.0" step="0.1" value="{{ parameters.get('contrast', 1.0) }}">
+                </div>
+                <div class="control-group">
+                    <label for="brightness">Brightness ({{ parameters.get('brightness', 1.0) }})</label>
+                    <input type="range" id="brightness" name="brightness" min="0.5" max="3.0" step="0.1" value="{{ parameters.get('brightness', 1.0) }}">
+                </div>
+                <div class="control-group">
+                    <label for="gamma">Gamma ({{ parameters.get('gamma', 1.0) }})</label>
+                    <input type="range" id="gamma" name="gamma" min="0.1" max="3.0" step="0.1" value="{{ parameters.get('gamma', 1.0) }}">
+                </div>
+                <div class="control-group">
+                    <label for="exposure">Exposure ({{ parameters.get('exposure', 1.0) }})</label>
+                    <input type="range" id="exposure" name="exposure" min="0.5" max="3.0" step="0.1" value="{{ parameters.get('exposure', 1.0) }}">
+                </div>
+                <!-- ตัวเลือกเพิ่มเติม -->
+                <div class="control-group">
+                    <label for="method">Thresholding Method</label>
+                    <select id="method" name="method">
+                        {% for m in threshold_methods %}
+                            <option value="{{ m }}" {% if parameters.get('method', 'Global Thresholding') == m %}selected{% endif %}>{{ m }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="invert">Invert สี</label>
+                    <input type="checkbox" id="invert" name="invert" {% if 'invert' in parameters %}checked{% endif %}>
+                </div>
+                <!-- เพิ่มพารามิเตอร์อื่น ๆ ตามต้องการ -->
+                <!-- ปุ่มส่งฟอร์ม -->
+                <div class="submit-button">
+                    <button type="submit">อัปเดตภาพ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
