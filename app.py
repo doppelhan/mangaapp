@@ -210,7 +210,7 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
 
     # Create a mask image for processing
     mask_image = Image.fromarray((mask * 255).astype(np.uint8), mode='L')
-    mask_image = mask_image.resize((width, height), Image.NEAREST)
+    mask_image = mask_image.resize((width, height), Image.Resampling.NEAREST)
     mask_array = np.array(mask_image)
 
     # Prepare brightness data
@@ -267,205 +267,24 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
                     draw.line((x, y, x + length, y + length), fill=line_color, width=1)
                     draw.line((x + length, y, x, y + length), fill=line_color, width=1)
 
-    elif pattern == "Lines":
-        min_spacing = max(2, 15 - size)
-        max_spacing = max(5, 25 - size)
-        spacing = int(max_spacing - (density / 100) * (max_spacing - min_spacing))
-        spacing = max(spacing, 2)
-
-        for y in range(0, height, spacing):
-            if mask_array[y, :].any():
-                brightness = brightness_array[y, :].mean()
-                line_color = color + (int(255 * brightness),)
-                draw.line((0, y, width, y), fill=line_color, width=1)
-
-    elif pattern == "Vertical Lines":
-        min_spacing = max(2, 15 - size)
-        max_spacing = max(5, 25 - size)
-        spacing = int(max_spacing - (density / 100) * (max_spacing - min_spacing))
-        spacing = max(spacing, 2)
-
-        for x in range(0, width, spacing):
-            if mask_array[:, x].any():
-                brightness = brightness_array[:, x].mean()
-                line_color = color + (int(255 * brightness),)
-                draw.line((x, 0, x, height), fill=line_color, width=1)
-
-    elif pattern == "Horizontal Lines":
-        min_spacing = max(2, 15 - size)
-        max_spacing = max(5, 25 - size)
-        spacing = int(max_spacing - (density / 100) * (max_spacing - min_spacing))
-        spacing = max(spacing, 2)
-
-        for y in range(0, height, spacing):
-            if mask_array[y, :].any():
-                brightness = brightness_array[y, :].mean()
-                line_color = color + (int(255 * brightness),)
-                draw.line((0, y, width, y), fill=line_color, width=1)
-
-    elif pattern == "Checkerboard":
-        step = size * 2
-        for y in range(0, height, step):
-            for x in range(0, width, step):
-                if mask_array[y, x]:
-                    brightness = brightness_array[y, x]
-                    fill_color = color + (int(255 * brightness),)
-                    if (x // step + y // step) % 2 == 0:
-                        box = (x, y, x + size, y + size)
-                        draw.rectangle(box, fill=fill_color)
-                    else:
-                        box = (x + size, y, x + step, y + size)
-                        draw.rectangle(box, fill=fill_color)
-
-    elif pattern == "Diagonal Stripes":
-        spacing = size * 2
-        for i in range(-height, width, spacing):
-            brightness = brightness_array.mean()
-            line_color = color + (int(255 * brightness),)
-            draw.line([(i, 0), (i + height, height)], fill=line_color, width=1)
-
-    elif pattern == "Spiral":
-        center_x, center_y = width // 2, height // 2
-        max_radius = min(center_x, center_y)
-        for angle in np.linspace(0, 4 * np.pi, int(max_radius / size) * 10):
-            radius = size * angle / (2 * np.pi)
-            x = int(center_x + radius * np.cos(angle))
-            y = int(center_y + radius * np.sin(angle))
-            if 0 <= x < width and 0 <= y < height and mask_array[y, x]:
-                brightness = brightness_array[y, x]
-                point_color = color + (int(255 * brightness),)
-                draw.point((x, y), fill=point_color)
-
-    elif pattern == "Pencil Shading":
-        if pencil_style == "Light":
-            # Light pencil shading implementation
-            line_spacing = size * 2
-            line_width = 1
-            angle_range = (-np.pi/6, np.pi/6)
+    elif pattern == "Manga Style":
+        # Manga style pencil shading
+        line_spacing = size
+        line_width = 1
+        angles = [np.pi / 6, -np.pi / 6]
+        for angle in angles:
             for y in range(0, height, line_spacing):
                 for x in range(0, width, line_spacing):
                     if mask_array[y, x]:
                         brightness = brightness_array[y, x]
-                        opacity = int(50 + brightness * 205)
+                        opacity = int(80 + brightness * 175)
                         line_color = color + (opacity,)
-                        angle = np.random.uniform(angle_range[0], angle_range[1])
-                        length = int(size + brightness * size * 2)
+                        length = int(size * 2 + brightness * size * 2)
                         dx = length * np.cos(angle)
                         dy = length * np.sin(angle)
                         x_end = x + dx
                         y_end = y + dy
                         draw.line((x - dx, y - dy, x_end, y_end), fill=line_color, width=line_width)
-
-        elif pencil_style == "Medium":
-            # Medium pencil shading implementation
-            line_spacing = size
-            line_width = 1
-            angle_range = (-np.pi/4, np.pi/4)
-            for y in range(0, height, line_spacing):
-                for x in range(0, width, line_spacing):
-                    if mask_array[y, x]:
-                        brightness = brightness_array[y, x]
-                        opacity = int(70 + brightness * 185)
-                        line_color = color + (opacity,)
-                        angle = np.random.uniform(angle_range[0], angle_range[1])
-                        length = int(size + brightness * size * 2)
-                        dx = length * np.cos(angle)
-                        dy = length * np.sin(angle)
-                        x_end = x + dx
-                        y_end = y + dy
-                        draw.line((x - dx, y - dy, x_end, y_end), fill=line_color, width=line_width)
-
-        elif pencil_style == "Dark":
-            # Dark pencil shading implementation
-            line_spacing = max(1, size // 2)
-            line_width = 2
-            angle_range = (-np.pi/2, np.pi/2)
-            for y in range(0, height, line_spacing):
-                for x in range(0, width, line_spacing):
-                    if mask_array[y, x]:
-                        brightness = brightness_array[y, x]
-                        opacity = int(90 + brightness * 165)
-                        line_color = color + (opacity,)
-                        angle = np.random.uniform(angle_range[0], angle_range[1])
-                        length = int(size + brightness * size * 2)
-                        dx = length * np.cos(angle)
-                        dy = length * np.sin(angle)
-                        x_end = x + dx
-                        y_end = y + dy
-                        draw.line((x - dx, y - dy, x_end, y_end), fill=line_color, width=line_width)
-
-        elif pencil_style == "Hatched":
-            # Hatched pencil shading implementation
-            line_spacing = size
-            line_width = 1
-            fixed_angle = np.pi / 4  # 45 degrees
-            for y in range(0, height, line_spacing):
-                for x in range(0, width, line_spacing):
-                    if mask_array[y, x]:
-                        brightness = brightness_array[y, x]
-                        opacity = int(70 + brightness * 185)
-                        line_color = color + (opacity,)
-                        angle = fixed_angle
-                        length = int(size + brightness * size * 2)
-                        dx = length * np.cos(angle)
-                        dy = length * np.sin(angle)
-                        x_end = x + dx
-                        y_end = y + dy
-                        draw.line((x - dx, y - dy, x_end, y_end), fill=line_color, width=line_width)
-
-        elif pencil_style == "Cross-hatched":
-            # Cross-hatched pencil shading implementation
-            line_spacing = size
-            line_width = 1
-            angles = [np.pi / 4, -np.pi / 4]
-            for angle in angles:
-                for y in range(0, height, line_spacing):
-                    for x in range(0, width, line_spacing):
-                        if mask_array[y, x]:
-                            brightness = brightness_array[y, x]
-                            opacity = int(70 + brightness * 185)
-                            line_color = color + (opacity,)
-                            length = int(size + brightness * size * 2)
-                            dx = length * np.cos(angle)
-                            dy = length * np.sin(angle)
-                            x_end = x + dx
-                            y_end = y + dy
-                            draw.line((x - dx, y - dy, x_end, y_end), fill=line_color, width=line_width)
-
-        elif pencil_style == "Manga Style":
-            # Manga style pencil shading
-            line_spacing = size
-            line_width = 1
-            angles = [np.pi / 6, -np.pi / 6]
-            for angle in angles:
-                for y in range(0, height, line_spacing):
-                    for x in range(0, width, line_spacing):
-                        if mask_array[y, x]:
-                            brightness = brightness_array[y, x]
-                            opacity = int(80 + brightness * 175)
-                            line_color = color + (opacity,)
-                            length = int(size * 2 + brightness * size * 2)
-                            dx = length * np.cos(angle)
-                            dy = length * np.sin(angle)
-                            x_end = x + dx
-                            y_end = y + dy
-                            draw.line((x - dx, y - dy, x_end, y_end), fill=line_color, width=line_width)
-
-        else:
-            # Default pencil shading implementation
-            for y in range(0, height, size):
-                for x in range(0, width, size):
-                    if mask_array[y, x]:
-                        brightness = brightness_array[y, x]
-                        opacity = int(70 + brightness * 185)
-                        line_color = color + (opacity,)
-                        angle = np.random.uniform(-np.pi/4, np.pi/4)
-                        length = int(size + brightness * size * 2)
-                        dx = length * np.cos(angle)
-                        dy = length * np.sin(angle)
-                        x_end = x + dx
-                        y_end = y + dy
-                        draw.line((x - dx, y - dy, x_end, y_end), fill=line_color, width=1)
 
     elif pattern == "Halftone Circles":
         max_radius = size
@@ -606,7 +425,7 @@ def process_image(params):
 
     img = original_image.copy()
 
-    # **ลดขนาดภาพก่อนการประมวลผลเพื่อเพิ่มประสิทธิภาพ**
+    # ลดขนาดภาพก่อนการประมวลผลเพื่อเพิ่มประสิทธิภาพ
     MAX_PROCESSING_SIZE = 2000  # กำหนดขนาดสูงสุดที่ต้องการให้ภาพมีด้านใดด้านหนึ่งไม่เกิน
     img.thumbnail((MAX_PROCESSING_SIZE, MAX_PROCESSING_SIZE), Image.Resampling.LANCZOS)
 
@@ -733,7 +552,7 @@ def process_image(params):
             pencil_style=pencil_shading_style_2
         )
 
-    # Add pixel dimensions to images
+    # Add pixel dimensions to processed image
     def add_dimensions(img, size):
         draw = ImageDraw.Draw(img)
         font_size = max(20, min(size) // 40)  # ปรับขนาดฟอนต์ตามขนาดภาพ
@@ -751,10 +570,9 @@ def process_image(params):
         draw.text((5, 5), text, fill=(0, 0, 0), font=font)
         return img
 
-    original_img_with_dims = add_dimensions(original_image.copy(), original_image.size)
     processed_img_with_dims = add_dimensions(processed_pil.copy(), processed_pil.size)
 
-    # Adjust image size display to 800x600 or 600x800 based on orientation
+    # Adjust image size for display to 800x600 or 600x800 based on orientation
     def resize_for_display(img):
         target_size_landscape = (800, 600)
         target_size_portrait = (600, 800)
@@ -764,32 +582,20 @@ def process_image(params):
             img = img.resize(target_size_portrait, Image.Resampling.LANCZOS)
         return img
 
-    original_img_with_dims = resize_for_display(original_img_with_dims)
     processed_img_with_dims = resize_for_display(processed_img_with_dims)
 
-    # Combine original and processed images side by side
-    def combine_images(img1, img2):
-        combined_width = img1.width + img2.width + 20  # 20px เว้นระยะห่าง
-        combined_height = max(img1.height, img2.height)
-        combined_img = Image.new('RGB', (combined_width, combined_height), (255, 255, 255))
-        combined_img.paste(img1, (0, 0))
-        combined_img.paste(img2, (img1.width + 20, 0))
-        return combined_img
-
-    final_img = combine_images(original_img_with_dims, processed_img_with_dims)
-
     # Convert final image to base64
-    final_img_str = image_to_base64(final_img)
+    final_img_str = image_to_base64(processed_img_with_dims)
 
     # Store the processed image
-    processed_image = final_img
+    processed_image = processed_img_with_dims
 
     # Return Base64 for display
     return final_img_str
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    global original_image, original_format, original_info
+    global original_image, original_format, original_info, processed_image
 
     if request.method == 'POST':
         # Receive image file from user
@@ -800,21 +606,23 @@ def index():
                 original_image = img.convert('RGB')
                 original_format = img.format
                 original_info = img.info
-                original_img_str = image_to_base64(original_image)
-                return render_template('index.html', original_image=original_img_str,
+                # Initialize parameters with default values
+                default_params = {
+                    'method': 'Special Adaptive Thresholding',
+                    'c_value': 6,
+                    'screen_tone_size_1': 2,
+                    'screen_tone_density_1': 50,
+                    'screen_tone_size_2': 2,
+                    'screen_tone_density_2': 50
+                }
+                processed_image_str = process_image(default_params)
+                return render_template('index.html', processed_image=processed_image_str,
                                        threshold_methods=threshold_methods,
                                        noise_reduction_methods=noise_reduction_methods,
                                        screen_tone_patterns=screen_tone_patterns,
                                        screen_tone_area_patterns=screen_tone_area_patterns,
                                        pencil_shading_styles=pencil_shading_styles,
-                                       default_params={
-                                           'method': 'Special Adaptive Thresholding',
-                                           'c_value': 6,
-                                           'screen_tone_size_1': 2,
-                                           'screen_tone_density_1': 50,
-                                           'screen_tone_size_2': 2,
-                                           'screen_tone_density_2': 50
-                                       })
+                                       default_params=default_params)
             except Exception as e:
                 logger.error(f"Error processing uploaded image: {e}")
                 return "Error processing the uploaded image.", 500
@@ -834,7 +642,7 @@ def index():
                                })
 
 @app.route('/process', methods=['POST'])
-def process():
+def process_route():
     params = request.json
     img_str = process_image(params)
     if img_str:
@@ -863,6 +671,11 @@ def handle_exception(e):
         # Log ข้อผิดพลาดลงใน Logs
         logger.error(f"Unhandled Exception: {e}")
         return jsonify(error="Internal Server Error"), 500
+
+# เพิ่ม Error Handler สำหรับ 413 Request Entity Too Large
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return "ไฟล์ที่คุณอัปโหลดมีขนาดใหญ่เกินไป. โปรดลองอัปโหลดไฟล์ที่มีขนาดไม่เกิน 100MB.", 413
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

@@ -65,7 +65,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             overflow: hidden;
-            max-width: 45%;
+            max-width: 100%;
         }
         .image-wrapper img {
             width: 100%;
@@ -88,7 +88,7 @@
             <button type="submit">Upload Image</button>
         </form>
 
-        {% if original_image %}
+        {% if processed_image %}
             <div class="parameters-row">
                 <!-- กลุ่มที่ 1: การตั้งค่าพื้นฐาน -->
                 <div class="parameter-group">
@@ -244,10 +244,7 @@
 
             <div class="images-container">
                 <div class="image-wrapper">
-                    <img id="original-image-display" src="data:image/png;base64,{{ original_image }}" alt="Original Image">
-                </div>
-                <div class="image-wrapper">
-                    <img id="processed-image-display" src="" alt="Processed Image">
+                    <img id="processed-image-display" src="data:image/png;base64,{{ processed_image }}" alt="Processed Image">
                 </div>
             </div>
         {% endif %}
