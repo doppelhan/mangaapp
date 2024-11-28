@@ -263,7 +263,7 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
                 if mask_array[y, x]:
                     brightness = brightness_array[y, x]
                     line_color = color + (int(255 * brightness),)
-                    length = int(size + brightness * size)
+                    length = int(size + brightness * size * 2)
                     draw.line((x, y, x + length, y + length), fill=line_color, width=1)
                     draw.line((x + length, y, x, y + length), fill=line_color, width=1)
 
@@ -606,10 +606,9 @@ def process_image(params):
 
     img = original_image.copy()
 
-    # **รองรับการอัปโหลดภาพขนาดใหญ่โดยไม่จำกัดขนาด**
-    # หากต้องการลดขนาดภาพเพื่อเพิ่มประสิทธิภาพ, สามารถเปิดการใช้งานได้
-    # MAX_RESOLUTION = (2000, 2000)  # กำหนดขนาดสูงสุดของภาพ
-    # img.thumbnail(MAX_RESOLUTION, Image.ANTIALIAS)
+    # **ลดขนาดภาพก่อนการประมวลผลเพื่อเพิ่มประสิทธิภาพ**
+    MAX_PROCESSING_SIZE = 2000  # กำหนดขนาดสูงสุดที่ต้องการให้ภาพมีด้านใดด้านหนึ่งไม่เกิน
+    img.thumbnail((MAX_PROCESSING_SIZE, MAX_PROCESSING_SIZE), Image.Resampling.LANCZOS)
 
     # Adjust Contrast and Brightness
     img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
@@ -760,9 +759,9 @@ def process_image(params):
         target_size_landscape = (800, 600)
         target_size_portrait = (600, 800)
         if img.width >= img.height:
-            img = img.resize(target_size_landscape, Image.ANTIALIAS)
+            img = img.resize(target_size_landscape, Image.Resampling.LANCZOS)
         else:
-            img = img.resize(target_size_portrait, Image.ANTIALIAS)
+            img = img.resize(target_size_portrait, Image.Resampling.LANCZOS)
         return img
 
     original_img_with_dims = resize_for_display(original_img_with_dims)

@@ -257,7 +257,7 @@
         document.getElementById('process-button').addEventListener('click', function() {
             // Gather all parameters
             const params = {
-                threshold: document.getElementById('threshold').value,
+                threshold: parseInt(document.getElementById('threshold').value),
                 contrast: parseFloat(document.getElementById('contrast').value),
                 brightness: parseFloat(document.getElementById('brightness').value),
                 gamma: parseFloat(document.getElementById('gamma').value),
