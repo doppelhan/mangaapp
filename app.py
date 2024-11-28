@@ -129,8 +129,8 @@ def generate_mask(gray_image, pattern):
         mask = grad_mag > 50
 
     elif pattern == "Gradient Magnitude":
-        laplacian = cv2.Laplacian(gray_image, cv2.CV_16S)
-        abs_laplacian = cv2.convertScaleAbs(laplacian)
+        laplacian = cv2.Laplacian(gray_image, cv2.CV_64F)
+        abs_laplacian = np.absolute(laplacian)
         mask = abs_laplacian > 30
 
     elif pattern == "Texture Complexity":
@@ -309,9 +309,9 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
     elif pattern == "Checkerboard":
         step = size * 2
         for y in range(0, height, step):
-            for x in range(0, width, step):
-                if mask_array[y:y+step, x:x+step].any():
-                    brightness = brightness_array[y:y+step, x:x+step].mean()
+            for x in range(-size, width + size, step):
+                if mask_array[y, x] if 0 <= x < width else False:
+                    brightness = brightness_array[y, x]
                     fill_color = color + (int(255 * brightness),)
                     if (x // step + y // step) % 2 == 0:
                         box = (x, y, x + size, y + size)
@@ -569,19 +569,19 @@ def process_image(params):
     method = params.get('method', 'Special Adaptive Thresholding')
     block_size = int(params.get('block_size', 11))
     c_value = int(params.get('c_value', 6))  # Default C Value set to 6
-    invert = params.get('invert', 'false') == 'true'
+    invert = params.get('invert', False)
     noise_reduction_method = params.get('noise_reduction', 'None')
-    sharpen = params.get('sharpen', 'false') == 'true'
-    edge_enhance = params.get('edge_enhance', 'false') == 'true'
-    hist_eq = params.get('hist_eq', 'false') == 'true'
-    clahe = params.get('clahe', 'false') == 'true'
+    sharpen = params.get('sharpen', False)
+    edge_enhance = params.get('edge_enhance', False)
+    hist_eq = params.get('hist_eq', False)
+    clahe = params.get('clahe', False)
     clip_limit = float(params.get('clip_limit', 2.0))
     tile_grid_size = int(params.get('tile_grid_size', 8))
-    local_contrast = params.get('local_contrast', 'false') == 'true'
+    local_contrast = params.get('local_contrast', False)
     kernel_size = int(params.get('kernel_size', 9))
 
     # Screen Tone Layer 1
-    screen_tone_1 = params.get('screen_tone_1', 'false') == 'true'
+    screen_tone_1 = params.get('screen_tone_1', False)
     screen_tone_pattern_1 = params.get('screen_tone_pattern_1', 'None')
     screen_tone_size_1 = int(params.get('screen_tone_size_1', 2))  # Default Size set to 2
     screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))  # Default Density set to 50
@@ -591,7 +591,7 @@ def process_image(params):
     screen_tone_color_1 = tuple(int(screen_tone_color_1.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
     # Screen Tone Layer 2
-    screen_tone_2 = params.get('screen_tone_2', 'false') == 'true'
+    screen_tone_2 = params.get('screen_tone_2', False)
     screen_tone_pattern_2 = params.get('screen_tone_pattern_2', 'None')
     screen_tone_size_2 = int(params.get('screen_tone_size_2', 2))  # Default Size set to 2
     screen_tone_density_2 = int(params.get('screen_tone_density_2', 50))  # Default Density set to 50
@@ -610,7 +610,7 @@ def process_image(params):
     img = original_image.copy()
 
     # Resize image if it's too large to prevent excessive processing time
-    MAX_RESOLUTION = (2000, 2000)  # ตัวอย่างขนาดสูงสุด
+    MAX_RESOLUTION = (2000, 2000)  # กำหนดขนาดสูงสุดของภาพ
     img.thumbnail(MAX_RESOLUTION, Image.ANTIALIAS)
 
     # Adjust Contrast and Brightness
@@ -639,6 +639,8 @@ def process_image(params):
     if local_contrast:
         if kernel_size % 2 == 0:
             kernel_size += 1
+        if kernel_size <= 1:
+            kernel_size = 3
         gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
         gray = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0)
 
@@ -737,7 +739,7 @@ def process_image(params):
     # Add pixel dimensions to images
     def add_dimensions(img, size):
         draw = ImageDraw.Draw(img)
-        font_size = max(20, size[0] // 30)  # ปรับขนาดฟอนต์ตามขนาดภาพ
+        font_size = max(20, min(size) // 40)  # ปรับขนาดฟอนต์ตามขนาดภาพ
         try:
             font = ImageFont.truetype("arial.ttf", font_size)
         except IOError:
@@ -749,7 +751,20 @@ def process_image(params):
         return img
 
     original_img_with_dims = add_dimensions(original_image.copy(), original_image.size)
-    processed_img_with_dims = add_dimensions(processed_image.copy(), processed_image.size)
+    processed_img_with_dims = add_dimensions(processed_pil.copy(), processed_pil.size)
+
+    # Adjust image size display to 800x600 or 600x800 based on orientation
+    def resize_for_display(img):
+        target_size_landscape = (800, 600)
+        target_size_portrait = (600, 800)
+        if img.width >= img.height:
+            img = img.resize(target_size_landscape, Image.ANTIALIAS)
+        else:
+            img = img.resize(target_size_portrait, Image.ANTIALIAS)
+        return img
+
+    original_img_with_dims = resize_for_display(original_img_with_dims)
+    processed_img_with_dims = resize_for_display(processed_img_with_dims)
 
     # Combine original and processed images side by side
     def combine_images(img1, img2):
