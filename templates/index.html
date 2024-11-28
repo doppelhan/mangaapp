@@ -30,13 +30,6 @@
             display: flex;
             flex-direction: column;
         }
-        label {
-            margin-top: 10px;
-        }
-        input[type="number"], select, input[type="color"] {
-            padding: 5px;
-            margin-top: 5px;
-        }
         .screen-tone-section {
             border: 1px solid #ccc;
             padding: 15px;
@@ -51,6 +44,8 @@
             text-align: center;
             margin-top: 20px;
             gap: 10px;
+            display: flex;
+            justify-content: center;
         }
         button {
             padding: 10px 20px;
@@ -76,15 +71,6 @@
             width: 100%;
             height: auto;
             display: block;
-        }
-        .image-wrapper .dimensions {
-            position: absolute;
-            top: 0;
-            left: 0;
-            background: rgba(255, 255, 255, 0.7);
-            padding: 5px 10px;
-            font-size: 14px;
-            border-bottom-right-radius: 5px;
         }
         @media (max-width: 768px) {
             .image-wrapper {
@@ -250,15 +236,15 @@
                 method: document.getElementById('method').value,
                 block_size: document.getElementById('block_size').value,
                 c_value: document.getElementById('c_value').value,
-                invert: document.getElementById('invert').checked,
+                invert: document.getElementById('invert') ? document.getElementById('invert').checked : false,
                 noise_reduction: document.getElementById('noise_reduction').value,
-                sharpen: document.getElementById('sharpen').checked,
-                edge_enhance: document.getElementById('edge_enhance').checked,
-                hist_eq: document.getElementById('hist_eq').checked,
-                clahe: document.getElementById('clahe').checked,
+                sharpen: document.getElementById('sharpen') ? document.getElementById('sharpen').checked : false,
+                edge_enhance: document.getElementById('edge_enhance') ? document.getElementById('edge_enhance').checked : false,
+                hist_eq: document.getElementById('hist_eq') ? document.getElementById('hist_eq').checked : false,
+                clahe: document.getElementById('clahe') ? document.getElementById('clahe').checked : false,
                 clip_limit: document.getElementById('clip_limit').value,
                 tile_grid_size: document.getElementById('tile_grid_size').value,
-                local_contrast: document.getElementById('local_contrast').checked,
+                local_contrast: document.getElementById('local_contrast') ? document.getElementById('local_contrast').checked : false,
                 kernel_size: document.getElementById('kernel_size').value,
 
                 // Screen Tone Layer 1

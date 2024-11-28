@@ -6,6 +6,7 @@ import numpy as np
 import io
 import base64
 import logging
+from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__)
 
@@ -21,10 +22,6 @@ original_image = None
 processed_image = None
 original_format = None
 original_info = None
-
-# Default screen tone colors
-screen_tone_color = (50, 50, 50)
-screen_tone_color2 = (80, 80, 80)
 
 # Lists of parameters
 threshold_methods = [
@@ -309,9 +306,9 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
     elif pattern == "Checkerboard":
         step = size * 2
         for y in range(0, height, step):
-            for x in range(-size, width + size, step):
-                if mask_array[y, x] if 0 <= x < width else False:
-                    brightness = brightness_array[y, x]
+            for x in range(0, width, step):
+                if mask_array[y:y+step, x:x+step].any():
+                    brightness = brightness_array[y:y+step, x:x+step].mean()
                     fill_color = color + (int(255 * brightness),)
                     if (x // step + y // step) % 2 == 0:
                         box = (x, y, x + size, y + size)
@@ -558,7 +555,7 @@ def image_to_base64(img):
 
 # Function to process image
 def process_image(params):
-    global processed_image, original_image, screen_tone_color, screen_tone_color2
+    global processed_image, original_image
 
     # Extract parameters from params
     threshold_value = int(params.get('threshold', 128))
