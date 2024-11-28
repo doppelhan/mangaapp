@@ -8,17 +8,17 @@ import base64
 
 app = Flask(__name__)
 
-# ตัวแปรสำหรับเก็บภาพและข้อมูลที่เกี่ยวข้อง
+# Variables to store images and related data
 original_image = None
 processed_image = None
 original_format = None
 original_info = None
 
-# ค่าเริ่มต้นสีสกรีนโทน
+# Default screen tone colors
 screen_tone_color = (50, 50, 50)
 screen_tone_color2 = (80, 80, 80)
 
-# รายการพารามิเตอร์ต่าง ๆ
+# Lists of parameters
 threshold_methods = [
     "Global Thresholding",
     "Adaptive Mean Thresholding",
@@ -79,14 +79,14 @@ pencil_shading_styles = [
     "Manga Style"
 ]
 
-# ฟังก์ชันสำหรับปรับค่าแกมมา
+# Function to adjust gamma
 def adjust_gamma(image, gamma=1.0):
     invGamma = 1.0 / gamma
     table = (np.arange(256) / 255.0) ** invGamma * 255
     table = np.clip(table, 0, 255).astype("uint8")
     return cv2.LUT(image, table)
 
-# ฟังก์ชันสำหรับสร้างมาสก์
+# Function to generate mask
 def generate_mask(gray_image, pattern):
     if pattern == "Global Darkness":
         mask = gray_image < 100
@@ -195,28 +195,28 @@ def generate_mask(gray_image, pattern):
 
     return mask
 
-# ฟังก์ชันสำหรับเพิ่มสกรีนโทน
+# Function to apply screen tone
 def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None, color=(50, 50, 50), density=50, pencil_style="Light"):
     if pattern == "None" or mask is None:
-        return image  # ไม่ทำการเพิ่มสกรีนโทน
+        return image  # Do not apply screen tone
 
-    draw = ImageDraw.Draw(image, 'RGBA')  # ใช้โหมด RGBA เพื่อรองรับการโปร่งใส
+    draw = ImageDraw.Draw(image, 'RGBA')  # Use RGBA mode to support transparency
     width, height = image.size
 
-    # สร้างภาพมาสก์สำหรับการประมวลผล
+    # Create a mask image for processing
     mask_image = Image.fromarray((mask * 255).astype(np.uint8), mode='L')
     mask_image = mask_image.resize((width, height), Image.NEAREST)
     mask_array = np.array(mask_image)
 
-    # เตรียมข้อมูลความสว่างของภาพ
+    # Prepare brightness data
     if gray_image is not None:
         gray_image_resized = cv2.resize(gray_image, (width, height), interpolation=cv2.INTER_NEAREST)
-        brightness_array = 255 - gray_image_resized  # ยิ่งค่าสูง ยิ่งมืด
-        brightness_array = brightness_array / 255.0  # นำไปใช้เป็นสัดส่วน
+        brightness_array = 255 - gray_image_resized  # Higher value means darker
+        brightness_array = brightness_array / 255.0  # Scale to [0,1]
     else:
         brightness_array = np.ones((height, width))
 
-    # เลือกแพทเทิร์น
+    # Choose pattern
     if pattern == "Dots":
         max_radius = size
         min_radius = 1
@@ -541,18 +541,18 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
 
     return image
 
-# ฟังก์ชันสำหรับแปลงภาพเป็น Base64
+# Function to convert image to base64
 def image_to_base64(img):
     buffered = io.BytesIO()
     img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
     return img_str
 
-# ฟังก์ชันสำหรับประมวลผลภาพ
+# Function to process image
 def process_image(params):
     global processed_image, original_image, screen_tone_color, screen_tone_color2
 
-    # ดึงค่าพารามิเตอร์จาก params
+    # Extract parameters from params
     threshold_value = int(params.get('threshold', 128))
     contrast_value = float(params.get('contrast', 1.0))
     brightness_value = float(params.get('brightness', 1.0))
@@ -560,7 +560,7 @@ def process_image(params):
     exposure_value = float(params.get('exposure', 1.0))
     method = params.get('method', 'Special Adaptive Thresholding')
     block_size = int(params.get('block_size', 11))
-    c_value = int(params.get('c_value', 5))
+    c_value = int(params.get('c_value', 6))  # Default C Value set to 6
     invert = params.get('invert', 'false') == 'true'
     noise_reduction_method = params.get('noise_reduction', 'None')
     sharpen = params.get('sharpen', 'false') == 'true'
@@ -575,8 +575,8 @@ def process_image(params):
     # Screen Tone Layer 1
     screen_tone_1 = params.get('screen_tone_1', 'false') == 'true'
     screen_tone_pattern_1 = params.get('screen_tone_pattern_1', 'None')
-    screen_tone_size_1 = int(params.get('screen_tone_size_1', 5))
-    screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))
+    screen_tone_size_1 = int(params.get('screen_tone_size_1', 2))  # Default Size set to 2
+    screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))  # Default Density set to 50
     screen_tone_area_pattern_1 = params.get('screen_tone_area_pattern_1', 'Global Darkness')
     pencil_shading_style_1 = params.get('pencil_shading_style_1', 'Light')
     screen_tone_color_1 = params.get('screen_tone_color_1', '#323232')
@@ -585,30 +585,30 @@ def process_image(params):
     # Screen Tone Layer 2
     screen_tone_2 = params.get('screen_tone_2', 'false') == 'true'
     screen_tone_pattern_2 = params.get('screen_tone_pattern_2', 'None')
-    screen_tone_size_2 = int(params.get('screen_tone_size_2', 7))
-    screen_tone_density_2 = int(params.get('screen_tone_density_2', 70))
+    screen_tone_size_2 = int(params.get('screen_tone_size_2', 2))  # Default Size set to 2
+    screen_tone_density_2 = int(params.get('screen_tone_density_2', 50))  # Default Density set to 50
     screen_tone_area_pattern_2 = params.get('screen_tone_area_pattern_2', 'Shadow Regions')
     pencil_shading_style_2 = params.get('pencil_shading_style_2', 'Medium')
     screen_tone_color_2 = params.get('screen_tone_color_2', '#505050')
     screen_tone_color_2 = tuple(int(screen_tone_color_2.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
-    # กำหนดค่า threshold_type เป็น THRESH_BINARY
+    # Set threshold_type to THRESH_BINARY
     threshold_type = cv2.THRESH_BINARY
 
-    # ทำการประมวลผลภาพ
+    # Process the image
     if original_image is None:
         return None
 
     img = original_image.copy()
 
-    # ปรับค่า Contrast และ Brightness
+    # Adjust Contrast and Brightness
     img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     img_cv = cv2.convertScaleAbs(img_cv, alpha=contrast_value, beta=(brightness_value - 1) * 255)
 
-    # ปรับค่า Gamma Correction
+    # Adjust Gamma Correction
     img_cv = adjust_gamma(img_cv, gamma=gamma_value)
 
-    # แปลงภาพเป็นสีเทา
+    # Convert image to grayscale
     gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
 
     # Exposure Compensation
@@ -620,8 +620,8 @@ def process_image(params):
 
     # Adaptive Histogram Equalization (CLAHE)
     if clahe:
-        clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
-        gray = clahe.apply(gray)
+        clahe_obj = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
+        gray = clahe_obj.apply(gray)
 
     # Local Contrast Enhancement
     if local_contrast:
@@ -630,7 +630,7 @@ def process_image(params):
         gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
         gray = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0)
 
-    # การลดสัญญาณรบกวน
+    # Noise Reduction
     if noise_reduction_method == "Median Filter":
         denoised = cv2.medianBlur(gray, 3)
     elif noise_reduction_method == "Bilateral Filter":
@@ -642,12 +642,12 @@ def process_image(params):
     else:
         denoised = gray
 
-    # เพิ่มความคมชัด
+    # Sharpen the image
     if sharpen:
         gaussian = cv2.GaussianBlur(denoised, (0, 0), sigmaX=3)
         denoised = cv2.addWeighted(denoised, 1.5, gaussian, -0.5, 0)
 
-    # เพิ่มความชัดของขอบ
+    # Edge Enhancement
     if edge_enhance:
         edges = cv2.Canny(denoised, threshold1=50, threshold2=150)
         denoised = cv2.bitwise_or(denoised, edges)
@@ -684,17 +684,17 @@ def process_image(params):
     else:
         _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
 
-    # Invert สี
+    # Invert colors
     if invert:
         thresh = cv2.bitwise_not(thresh)
 
-    # แปลงภาพกลับเป็น RGB
+    # Convert back to RGB
     thresh_rgb = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
 
-    # แปลงเป็น PIL Image
+    # Convert to PIL Image
     processed_pil = Image.fromarray(thresh_rgb)
 
-    # สร้างมาสก์สำหรับ Screen Tone Layer 1
+    # Apply Screen Tone Layer 1
     if screen_tone_1 and screen_tone_pattern_1 != "None":
         mask1 = generate_mask(gray, screen_tone_area_pattern_1)
         processed_pil = apply_screen_tone(
@@ -708,7 +708,7 @@ def process_image(params):
             pencil_style=pencil_shading_style_1
         )
 
-    # สร้างมาสก์สำหรับ Screen Tone Layer 2
+    # Apply Screen Tone Layer 2
     if screen_tone_2 and screen_tone_pattern_2 != "None":
         mask2 = generate_mask(gray, screen_tone_area_pattern_2)
         processed_pil = apply_screen_tone(
@@ -722,10 +722,10 @@ def process_image(params):
             pencil_style=pencil_shading_style_2
         )
 
-    # เก็บภาพที่ประมวลผล
+    # Store the processed image
     processed_image = processed_pil
 
-    # คืนค่า Base64 สำหรับแสดงผล
+    # Return Base64 for display
     return image_to_base64(processed_pil)
 
 @app.route('/', methods=['GET', 'POST'])
@@ -733,7 +733,7 @@ def index():
     global original_image, original_format, original_info
 
     if request.method == 'POST':
-        # รับไฟล์ภาพจากผู้ใช้
+        # Receive image file from user
         file = request.files['image']
         if file:
             try:
@@ -747,7 +747,15 @@ def index():
                                        noise_reduction_methods=noise_reduction_methods,
                                        screen_tone_patterns=screen_tone_patterns,
                                        screen_tone_area_patterns=screen_tone_area_patterns,
-                                       pencil_shading_styles=pencil_shading_styles)
+                                       pencil_shading_styles=pencil_shading_styles,
+                                       default_params={
+                                           'method': 'Special Adaptive Thresholding',
+                                           'c_value': 6,
+                                           'screen_tone_size_1': 2,
+                                           'screen_tone_density_1': 50,
+                                           'screen_tone_size_2': 2,
+                                           'screen_tone_density_2': 50
+                                       })
             except Exception as e:
                 return str(e)
     else:
@@ -755,7 +763,15 @@ def index():
                                noise_reduction_methods=noise_reduction_methods,
                                screen_tone_patterns=screen_tone_patterns,
                                screen_tone_area_patterns=screen_tone_area_patterns,
-                               pencil_shading_styles=pencil_shading_styles)
+                               pencil_shading_styles=pencil_shading_styles,
+                               default_params={
+                                   'method': 'Special Adaptive Thresholding',
+                                   'c_value': 6,
+                                   'screen_tone_size_1': 2,
+                                   'screen_tone_density_1': 50,
+                                   'screen_tone_size_2': 2,
+                                   'screen_tone_density_2': 50
+                               })
 
 @app.route('/process', methods=['POST'])
 def process():
@@ -780,4 +796,3 @@ def save_image():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-
