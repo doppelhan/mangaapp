@@ -425,12 +425,15 @@ def process_image(params):
 
     img = original_image.copy()
 
-    # ลดขนาดภาพก่อนการประมวลผลเพื่อเพิ่มประสิทธิภาพ
+    # ลดขนาดภาพก่อนการประมวลผลเพื่อเพิ่มประสิทธิภาพ (ถ้าจำเป็น)
     MAX_PROCESSING_SIZE = 2000  # กำหนดขนาดสูงสุดที่ต้องการให้ภาพมีด้านใดด้านหนึ่งไม่เกิน
-    img.thumbnail((MAX_PROCESSING_SIZE, MAX_PROCESSING_SIZE), Image.Resampling.LANCZOS)
+    if max(img.size) > MAX_PROCESSING_SIZE:
+        img.thumbnail((MAX_PROCESSING_SIZE, MAX_PROCESSING_SIZE), Image.Resampling.LANCZOS)
+
+    # Convert PIL Image to OpenCV format
+    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
     # Adjust Contrast and Brightness
-    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     img_cv = cv2.convertScaleAbs(img_cv, alpha=contrast_value, beta=(brightness_value - 1) * 255)
 
     # Adjust Gamma Correction
@@ -552,25 +555,7 @@ def process_image(params):
             pencil_style=pencil_shading_style_2
         )
 
-    # Add pixel dimensions to processed image
-    def add_dimensions(img, size):
-        draw = ImageDraw.Draw(img)
-        font_size = max(20, min(size) // 40)  # ปรับขนาดฟอนต์ตามขนาดภาพ
-        try:
-            font = ImageFont.truetype("arial.ttf", font_size)
-        except IOError:
-            font = ImageFont.load_default()
-        text = f"{size[0]} x {size[1]} pixels"
-        # ใช้ textbbox เพื่อวัดขนาดข้อความ
-        text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
-        # เพิ่มพื้นหลังให้ข้อความอ่านง่ายขึ้น
-        draw.rectangle([(0,0), (text_width + 10, text_height + 10)], fill=(255, 255, 255, 128))
-        draw.text((5, 5), text, fill=(0, 0, 0), font=font)
-        return img
-
-    processed_img_with_dims = add_dimensions(processed_pil.copy(), processed_pil.size)
+    # ไม่เพิ่มขนาดพิกเซลลงในภาพ
 
     # Adjust image size for display to 800x600 or 600x800 based on orientation
     def resize_for_display(img):
@@ -582,7 +567,7 @@ def process_image(params):
             img = img.resize(target_size_portrait, Image.Resampling.LANCZOS)
         return img
 
-    processed_img_with_dims = resize_for_display(processed_img_with_dims)
+    processed_img_with_dims = resize_for_display(processed_pil)
 
     # Convert final image to base64
     final_img_str = image_to_base64(processed_img_with_dims)
@@ -616,18 +601,25 @@ def index():
                     'screen_tone_density_2': 50
                 }
                 processed_image_str = process_image(default_params)
-                return render_template('index.html', processed_image=processed_image_str,
+                # Convert original image to base64
+                original_img_str = image_to_base64(original_image)
+                return render_template('index.html',
+                                       original_image=original_img_str,
+                                       processed_image=processed_image_str,
                                        threshold_methods=threshold_methods,
                                        noise_reduction_methods=noise_reduction_methods,
                                        screen_tone_patterns=screen_tone_patterns,
                                        screen_tone_area_patterns=screen_tone_area_patterns,
                                        pencil_shading_styles=pencil_shading_styles,
-                                       default_params=default_params)
+                                       default_params=default_params,
+                                       original_size=original_image.size,
+                                       processed_size=processed_image.size if processed_image else (0,0))
             except Exception as e:
                 logger.error(f"Error processing uploaded image: {e}")
                 return "Error processing the uploaded image.", 500
     else:
-        return render_template('index.html', threshold_methods=threshold_methods,
+        return render_template('index.html',
+                               threshold_methods=threshold_methods,
                                noise_reduction_methods=noise_reduction_methods,
                                screen_tone_patterns=screen_tone_patterns,
                                screen_tone_area_patterns=screen_tone_area_patterns,
