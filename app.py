@@ -10,7 +10,7 @@ from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__)
 
-# ตั้งค่าขนาดสูงสุดของไฟล์ที่สามารถอัปโหลดได้ (เช่น 100MB)
+# ตั้งค่าขนาดสูงสุดของไฟล์ที่สามารถอัปโหลดได้ (100MB)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
 
 # ตั้งค่า Logging
@@ -606,7 +606,8 @@ def process_image(params):
 
     img = original_image.copy()
 
-    # **ลบการลดขนาดภาพเพื่อรองรับภาพขนาดใหญ่**
+    # **รองรับการอัปโหลดภาพขนาดใหญ่โดยไม่จำกัดขนาด**
+    # หากต้องการลดขนาดภาพเพื่อเพิ่มประสิทธิภาพ, สามารถเปิดการใช้งานได้
     # MAX_RESOLUTION = (2000, 2000)  # กำหนดขนาดสูงสุดของภาพ
     # img.thumbnail(MAX_RESOLUTION, Image.ANTIALIAS)
 
@@ -742,7 +743,10 @@ def process_image(params):
         except IOError:
             font = ImageFont.load_default()
         text = f"{size[0]} x {size[1]} pixels"
-        text_width, text_height = draw.textsize(text, font=font)
+        # ใช้ textbbox เพื่อวัดขนาดข้อความ
+        text_bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
         # เพิ่มพื้นหลังให้ข้อความอ่านง่ายขึ้น
         draw.rectangle([(0,0), (text_width + 10, text_height + 10)], fill=(255, 255, 255, 128))
         draw.text((5, 5), text, fill=(0, 0, 0), font=font)
