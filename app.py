@@ -10,8 +10,8 @@ from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__)
 
-# ตั้งค่าขนาดสูงสุดของไฟล์ที่สามารถอัปโหลดได้ (เช่น 50MB)
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
+# ตั้งค่าขนาดสูงสุดของไฟล์ที่สามารถอัปโหลดได้ (เช่น 100MB)
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
 
 # ตั้งค่า Logging
 logging.basicConfig(level=logging.INFO)
@@ -307,8 +307,8 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
         step = size * 2
         for y in range(0, height, step):
             for x in range(0, width, step):
-                if mask_array[y:y+step, x:x+step].any():
-                    brightness = brightness_array[y:y+step, x:x+step].mean()
+                if mask_array[y, x]:
+                    brightness = brightness_array[y, x]
                     fill_color = color + (int(255 * brightness),)
                     if (x // step + y // step) % 2 == 0:
                         box = (x, y, x + size, y + size)
@@ -606,9 +606,9 @@ def process_image(params):
 
     img = original_image.copy()
 
-    # Resize image if it's too large to prevent excessive processing time
-    MAX_RESOLUTION = (2000, 2000)  # กำหนดขนาดสูงสุดของภาพ
-    img.thumbnail(MAX_RESOLUTION, Image.ANTIALIAS)
+    # **ลบการลดขนาดภาพเพื่อรองรับภาพขนาดใหญ่**
+    # MAX_RESOLUTION = (2000, 2000)  # กำหนดขนาดสูงสุดของภาพ
+    # img.thumbnail(MAX_RESOLUTION, Image.ANTIALIAS)
 
     # Adjust Contrast and Brightness
     img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
@@ -743,6 +743,7 @@ def process_image(params):
             font = ImageFont.load_default()
         text = f"{size[0]} x {size[1]} pixels"
         text_width, text_height = draw.textsize(text, font=font)
+        # เพิ่มพื้นหลังให้ข้อความอ่านง่ายขึ้น
         draw.rectangle([(0,0), (text_width + 10, text_height + 10)], fill=(255, 255, 255, 128))
         draw.text((5, 5), text, fill=(0, 0, 0), font=font)
         return img
