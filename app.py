@@ -558,9 +558,9 @@ def process_image(params):
     brightness_value = float(params.get('brightness', 1.0))
     gamma_value = float(params.get('gamma', 1.0))
     exposure_value = float(params.get('exposure', 1.0))
-    method = params.get('method', 'Global Thresholding')
+    method = params.get('method', 'Special Adaptive Thresholding')
     block_size = int(params.get('block_size', 11))
-    c_value = int(params.get('c_value', 2))
+    c_value = int(params.get('c_value', 5))
     invert = params.get('invert', 'false') == 'true'
     noise_reduction_method = params.get('noise_reduction', 'None')
     sharpen = params.get('sharpen', 'false') == 'true'
