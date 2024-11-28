@@ -1,12 +1,20 @@
 import os
 from flask import Flask, render_template, request, jsonify, send_file
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
 import io
 import base64
+import logging
 
 app = Flask(__name__)
+
+# ตั้งค่าขนาดสูงสุดของไฟล์ที่สามารถอัปโหลดได้ (เช่น 50MB)
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
+
+# ตั้งค่า Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Variables to store images and related data
 original_image = None
@@ -601,6 +609,10 @@ def process_image(params):
 
     img = original_image.copy()
 
+    # Resize image if it's too large to prevent excessive processing time
+    MAX_RESOLUTION = (2000, 2000)  # ตัวอย่างขนาดสูงสุด
+    img.thumbnail(MAX_RESOLUTION, Image.ANTIALIAS)
+
     # Adjust Contrast and Brightness
     img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     img_cv = cv2.convertScaleAbs(img_cv, alpha=contrast_value, beta=(brightness_value - 1) * 255)
@@ -722,11 +734,42 @@ def process_image(params):
             pencil_style=pencil_shading_style_2
         )
 
+    # Add pixel dimensions to images
+    def add_dimensions(img, size):
+        draw = ImageDraw.Draw(img)
+        font_size = max(20, size[0] // 30)  # ปรับขนาดฟอนต์ตามขนาดภาพ
+        try:
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except IOError:
+            font = ImageFont.load_default()
+        text = f"{size[0]} x {size[1]} pixels"
+        text_width, text_height = draw.textsize(text, font=font)
+        draw.rectangle([(0,0), (text_width + 10, text_height + 10)], fill=(255, 255, 255, 128))
+        draw.text((5, 5), text, fill=(0, 0, 0), font=font)
+        return img
+
+    original_img_with_dims = add_dimensions(original_image.copy(), original_image.size)
+    processed_img_with_dims = add_dimensions(processed_image.copy(), processed_image.size)
+
+    # Combine original and processed images side by side
+    def combine_images(img1, img2):
+        combined_width = img1.width + img2.width + 20  # 20px เว้นระยะห่าง
+        combined_height = max(img1.height, img2.height)
+        combined_img = Image.new('RGB', (combined_width, combined_height), (255, 255, 255))
+        combined_img.paste(img1, (0, 0))
+        combined_img.paste(img2, (img1.width + 20, 0))
+        return combined_img
+
+    final_img = combine_images(original_img_with_dims, processed_img_with_dims)
+
+    # Convert final image to base64
+    final_img_str = image_to_base64(final_img)
+
     # Store the processed image
-    processed_image = processed_pil
+    processed_image = final_img
 
     # Return Base64 for display
-    return image_to_base64(processed_pil)
+    return final_img_str
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -757,7 +800,8 @@ def index():
                                            'screen_tone_density_2': 50
                                        })
             except Exception as e:
-                return str(e)
+                logger.error(f"Error processing uploaded image: {e}")
+                return "Error processing the uploaded image.", 500
     else:
         return render_template('index.html', threshold_methods=threshold_methods,
                                noise_reduction_methods=noise_reduction_methods,
@@ -780,7 +824,7 @@ def process():
     if img_str:
         return jsonify({'status': 'done', 'image': img_str})
     else:
-        return jsonify({'status': 'error'})
+        return jsonify({'status': 'error'}), 500
 
 @app.route('/save_image')
 def save_image():
@@ -793,6 +837,16 @@ def save_image():
                          download_name='processed_image.png')
     else:
         return 'No image to save.', 400
+
+# เพิ่ม Error Handler เพื่อจับข้อผิดพลาดทั่วไป
+@app.errorhandler(Exception)
+def handle_exception(e):
+    if isinstance(e, HTTPException):
+        return jsonify(error=e.description), e.code
+    else:
+        # Log ข้อผิดพลาดลงใน Logs
+        logger.error(f"Unhandled Exception: {e}")
+        return jsonify(error="Internal Server Error"), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

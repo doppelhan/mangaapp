@@ -5,37 +5,35 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f0f0f0;
+            margin: 20px;
+            background-color: #f8f9fa;
         }
         h1 {
             text-align: center;
         }
         .container {
-            max-width: 900px;
+            max-width: 1200px;
             margin: auto;
             background: white;
             padding: 20px;
             border-radius: 8px;
-        }
-        .image-container {
-            text-align: center;
-            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
         .parameters {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
+            margin-bottom: 20px;
         }
         .parameter-group {
-            flex: 1 1 300px;
+            flex: 1 1 200px;
+            display: flex;
+            flex-direction: column;
         }
         label {
-            display: block;
             margin-top: 10px;
         }
         input[type="number"], select, input[type="color"] {
-            width: 100%;
             padding: 5px;
             margin-top: 5px;
         }
@@ -44,24 +42,54 @@
             padding: 15px;
             border-radius: 5px;
             margin-top: 20px;
+            flex: 1 1 100%;
         }
         .screen-tone-section h3 {
             margin-top: 0;
         }
-        #processed-image {
-            max-width: 100%;
-            height: auto;
-            margin-top: 20px;
-        }
         .buttons {
             text-align: center;
             margin-top: 20px;
+            gap: 10px;
         }
         button {
             padding: 10px 20px;
-            margin: 5px;
             font-size: 16px;
             cursor: pointer;
+            margin: 5px;
+        }
+        .images-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .image-wrapper {
+            position: relative;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+            max-width: 45%;
+        }
+        .image-wrapper img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .image-wrapper .dimensions {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 5px 10px;
+            font-size: 14px;
+            border-bottom-right-radius: 5px;
+        }
+        @media (max-width: 768px) {
+            .image-wrapper {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
@@ -75,10 +103,6 @@
         </form>
 
         {% if original_image %}
-            <div class="image-container">
-                <h2>Original Image</h2>
-                <img id="original-image" src="data:image/png;base64,{{ original_image }}" alt="Original Image">
-            </div>
             <div class="parameters">
                 <div class="parameter-group">
                     <label for="method">Threshold Method:</label>
@@ -225,9 +249,13 @@
                 <button type="button" id="save-button">Save Image</button>
             </div>
 
-            <div class="image-container">
-                <h2>Processed Image</h2>
-                <img id="processed-image" src="" alt="Processed Image">
+            <div class="images-container">
+                <div class="image-wrapper">
+                    <img id="original-image-display" src="data:image/png;base64,{{ original_image }}" alt="Original Image">
+                </div>
+                <div class="image-wrapper">
+                    <img id="processed-image-display" src="" alt="Processed Image">
+                </div>
             </div>
         {% endif %}
     </div>
@@ -284,7 +312,7 @@
             .then(response => response.json())
             .then(data => {
                 if(data.status === 'done') {
-                    document.getElementById('processed-image').src = 'data:image/png;base64,' + data.image;
+                    document.getElementById('processed-image-display').src = 'data:image/png;base64,' + data.image;
                 } else {
                     alert('Error processing image.');
                 }
