@@ -1,4 +1,4 @@
-ฃimport os
+import os
 import uuid
 from flask import Flask, render_template, request, jsonify, send_file
 from PIL import Image, ImageDraw
