@@ -1,7 +1,7 @@
 import os
 import uuid
 from flask import Flask, render_template, request, jsonify, send_file
-from PIL import Image
+from PIL import Image, ImageDraw
 import cv2
 import numpy as np
 import io
@@ -266,8 +266,11 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
                     brightness = brightness_array[y, x]
                     line_color = color + (int(255 * brightness),)
                     length = int(size + brightness * size * 2)
-                    draw.line((x, y, x + length, y + length), fill=line_color, width=1)
-                    draw.line((x + length, y, x, y + length), fill=line_color, width=1)
+                    dx = length * np.cos(np.pi / 6)
+                    dy = length * np.sin(np.pi / 6)
+                    x_end = x + dx
+                    y_end = y + dy
+                    draw.line((x - dx, y - dy, x_end, y_end), fill=line_color, width=1)
 
     elif pattern == "Manga Style":
         # Manga style pencil shading
@@ -376,176 +379,177 @@ def image_to_base64(img):
 
 # Function to process image
 def process_image(image_path, params, is_preview=True):
-    # Extract parameters from params
-    threshold_value = int(params.get('threshold', 128))
-    contrast_value = float(params.get('contrast', 1.0))
-    brightness_value = float(params.get('brightness', 1.0))
-    gamma_value = float(params.get('gamma', 1.0))
-    exposure_value = float(params.get('exposure', 1.0))
-    method = params.get('method', 'Special Adaptive Thresholding')
-    block_size = int(params.get('block_size', 11))
-    c_value = int(params.get('c_value', 6))  # Default C Value set to 6
-    invert = params.get('invert', False)
-    noise_reduction_method = params.get('noise_reduction', 'None')
-    sharpen = params.get('sharpen', False)
-    edge_enhance = params.get('edge_enhance', False)
-    hist_eq = params.get('hist_eq', False)
-    clahe = params.get('clahe', False)
-    clip_limit = float(params.get('clip_limit', 2.0))
-    tile_grid_size = int(params.get('tile_grid_size', 8))
-    local_contrast = params.get('local_contrast', False)
-    kernel_size = int(params.get('kernel_size', 9))
+    try:
+        # Extract parameters from params
+        threshold_value = int(params.get('threshold', 128))
+        contrast_value = float(params.get('contrast', 1.0))
+        brightness_value = float(params.get('brightness', 1.0))
+        gamma_value = float(params.get('gamma', 1.0))
+        exposure_value = float(params.get('exposure', 1.0))
+        method = params.get('method', 'Special Adaptive Thresholding')
+        block_size = int(params.get('block_size', 11))
+        c_value = int(params.get('c_value', 6))  # Default C Value set to 6
+        invert = params.get('invert', False)
+        noise_reduction_method = params.get('noise_reduction', 'None')
+        sharpen = params.get('sharpen', False)
+        edge_enhance = params.get('edge_enhance', False)
+        hist_eq = params.get('hist_eq', False)
+        clahe = params.get('clahe', False)
+        clip_limit = float(params.get('clip_limit', 2.0))
+        tile_grid_size = int(params.get('tile_grid_size', 8))
+        local_contrast = params.get('local_contrast', False)
+        kernel_size = int(params.get('kernel_size', 9))
 
-    # Screen Tone Layer 1
-    screen_tone_1 = params.get('screen_tone_1', False)
-    screen_tone_pattern_1 = params.get('screen_tone_pattern_1', 'None')
-    screen_tone_size_1 = int(params.get('screen_tone_size_1', 2))  # Default Size set to 2
-    screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))  # Default Density set to 50
-    screen_tone_area_pattern_1 = params.get('screen_tone_area_pattern_1', 'Global Darkness')
-    pencil_shading_style_1 = params.get('pencil_shading_style_1', 'Light')
-    screen_tone_color_1 = params.get('screen_tone_color_1', '#323232')
-    screen_tone_color_1 = tuple(int(screen_tone_color_1.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        # Screen Tone Layer 1
+        screen_tone_1 = params.get('screen_tone_1', False)
+        screen_tone_pattern_1 = params.get('screen_tone_pattern_1', 'None')
+        screen_tone_size_1 = int(params.get('screen_tone_size_1', 2))  # Default Size set to 2
+        screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))  # Default Density set to 50
+        screen_tone_area_pattern_1 = params.get('screen_tone_area_pattern_1', 'Global Darkness')
+        pencil_shading_style_1 = params.get('pencil_shading_style_1', 'Light')
+        screen_tone_color_1 = params.get('screen_tone_color_1', '#323232')
+        screen_tone_color_1 = tuple(int(screen_tone_color_1.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
-    # Screen Tone Layer 2
-    screen_tone_2 = params.get('screen_tone_2', False)
-    screen_tone_pattern_2 = params.get('screen_tone_pattern_2', 'None')
-    screen_tone_size_2 = int(params.get('screen_tone_size_2', 2))  # Default Size set to 2
-    screen_tone_density_2 = int(params.get('screen_tone_density_2', 50))  # Default Density set to 50
-    screen_tone_area_pattern_2 = params.get('screen_tone_area_pattern_2', 'Shadow Regions')
-    pencil_shading_style_2 = params.get('pencil_shading_style_2', 'Medium')
-    screen_tone_color_2 = params.get('screen_tone_color_2', '#505050')
-    screen_tone_color_2 = tuple(int(screen_tone_color_2.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        # Screen Tone Layer 2
+        screen_tone_2 = params.get('screen_tone_2', False)
+        screen_tone_pattern_2 = params.get('screen_tone_pattern_2', 'None')
+        screen_tone_size_2 = int(params.get('screen_tone_size_2', 2))  # Default Size set to 2
+        screen_tone_density_2 = int(params.get('screen_tone_density_2', 50))  # Default Density set to 50
+        screen_tone_area_pattern_2 = params.get('screen_tone_area_pattern_2', 'Shadow Regions')
+        pencil_shading_style_2 = params.get('pencil_shading_style_2', 'Medium')
+        screen_tone_color_2 = params.get('screen_tone_color_2', '#505050')
+        screen_tone_color_2 = tuple(int(screen_tone_color_2.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
-    # Set threshold_type to THRESH_BINARY
-    threshold_type = cv2.THRESH_BINARY
+        # Set threshold_type to THRESH_BINARY
+        threshold_type = cv2.THRESH_BINARY
 
-    # Load the image
-    img = Image.open(image_path).convert('RGB')
-    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        # Load the image
+        img = Image.open(image_path).convert('RGB')
+        img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-    # Adjust Contrast and Brightness
-    img_cv = cv2.convertScaleAbs(img_cv, alpha=contrast_value, beta=(brightness_value - 1) * 255)
+        # Adjust Contrast and Brightness
+        img_cv = cv2.convertScaleAbs(img_cv, alpha=contrast_value, beta=(brightness_value - 1) * 255)
 
-    # Adjust Gamma Correction
-    img_cv = adjust_gamma(img_cv, gamma=gamma_value)
+        # Adjust Gamma Correction
+        img_cv = adjust_gamma(img_cv, gamma=gamma_value)
 
-    # Convert image to grayscale
-    gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+        # Convert image to grayscale
+        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
 
-    # Exposure Compensation
-    gray = cv2.convertScaleAbs(gray, alpha=exposure_value, beta=0)
+        # Exposure Compensation
+        gray = cv2.convertScaleAbs(gray, alpha=exposure_value, beta=0)
 
-    # Histogram Equalization
-    if hist_eq:
-        gray = cv2.equalizeHist(gray)
+        # Histogram Equalization
+        if hist_eq:
+            gray = cv2.equalizeHist(gray)
 
-    # Adaptive Histogram Equalization (CLAHE)
-    if clahe:
-        clahe_obj = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
-        gray = clahe_obj.apply(gray)
+        # Adaptive Histogram Equalization (CLAHE)
+        if clahe:
+            clahe_obj = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
+            gray = clahe_obj.apply(gray)
 
-    # Local Contrast Enhancement
-    if local_contrast:
-        if kernel_size % 2 == 0:
-            kernel_size += 1
-        if kernel_size <= 1:
-            kernel_size = 3
-        gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
-        gray = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0)
+        # Local Contrast Enhancement
+        if local_contrast:
+            if kernel_size % 2 == 0:
+                kernel_size += 1
+            if kernel_size <= 1:
+                kernel_size = 3
+            gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
+            gray = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0)
 
-    # Noise Reduction
-    if noise_reduction_method == "Median Filter":
-        denoised = cv2.medianBlur(gray, 3)
-    elif noise_reduction_method == "Bilateral Filter":
-        denoised = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
-    elif noise_reduction_method == "Gaussian Blur":
-        denoised = cv2.GaussianBlur(gray, (5, 5), 0)
-    elif noise_reduction_method == "Non-local Means Denoising":
-        denoised = cv2.fastNlMeansDenoising(gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
-    else:
-        denoised = gray
+        # Noise Reduction
+        if noise_reduction_method == "Median Filter":
+            denoised = cv2.medianBlur(gray, 3)
+        elif noise_reduction_method == "Bilateral Filter":
+            denoised = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+        elif noise_reduction_method == "Gaussian Blur":
+            denoised = cv2.GaussianBlur(gray, (5, 5), 0)
+        elif noise_reduction_method == "Non-local Means Denoising":
+            denoised = cv2.fastNlMeansDenoising(gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
+        else:
+            denoised = gray
 
-    # Sharpen the image
-    if sharpen:
-        gaussian = cv2.GaussianBlur(denoised, (0, 0), sigmaX=3)
-        denoised = cv2.addWeighted(denoised, 1.5, gaussian, -0.5, 0)
+        # Sharpen the image
+        if sharpen:
+            gaussian = cv2.GaussianBlur(denoised, (0, 0), sigmaX=3)
+            denoised = cv2.addWeighted(denoised, 1.5, gaussian, -0.5, 0)
 
-    # Edge Enhancement
-    if edge_enhance:
-        edges = cv2.Canny(denoised, threshold1=50, threshold2=150)
-        denoised = cv2.bitwise_or(denoised, edges)
+        # Edge Enhancement
+        if edge_enhance:
+            edges = cv2.Canny(denoised, threshold1=50, threshold2=150)
+            denoised = cv2.bitwise_or(denoised, edges)
 
-    # Thresholding
-    if method == "Global Thresholding":
-        _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
-    elif method == "Adaptive Mean Thresholding":
-        if block_size % 2 == 0:
-            block_size += 1
-        if block_size <= 1:
-            block_size = 3
-        thresh = cv2.adaptiveThreshold(
-            denoised, 255, cv2.ADAPTIVE_THRESH_MEAN_C, threshold_type, block_size, c_value
-        )
-    elif method == "Adaptive Gaussian Thresholding":
-        if block_size % 2 == 0:
-            block_size += 1
-        if block_size <= 1:
-            block_size = 3
-        thresh = cv2.adaptiveThreshold(
-            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, threshold_type, block_size, c_value
-        )
-    elif method == "Special Adaptive Thresholding":
-        if block_size % 2 == 0:
-            block_size += 1
-        if block_size <= 1:
-            block_size = 3
-        thresh = cv2.adaptiveThreshold(
-            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, c_value
-        )
-        black_mask = gray < 50
-        thresh[black_mask] = 0
-    else:
-        _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
+        # Thresholding
+        if method == "Global Thresholding":
+            _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
+        elif method == "Adaptive Mean Thresholding":
+            if block_size % 2 == 0:
+                block_size += 1
+            if block_size <= 1:
+                block_size = 3
+            thresh = cv2.adaptiveThreshold(
+                denoised, 255, cv2.ADAPTIVE_THRESH_MEAN_C, threshold_type, block_size, c_value
+            )
+        elif method == "Adaptive Gaussian Thresholding":
+            if block_size % 2 == 0:
+                block_size += 1
+            if block_size <= 1:
+                block_size = 3
+            thresh = cv2.adaptiveThreshold(
+                denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, threshold_type, block_size, c_value
+            )
+        elif method == "Special Adaptive Thresholding":
+            if block_size % 2 == 0:
+                block_size += 1
+            if block_size <= 1:
+                block_size = 3
+            thresh = cv2.adaptiveThreshold(
+                denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, c_value
+            )
+            black_mask = gray < 50
+            thresh[black_mask] = 0
+        else:
+            _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
 
-    # Invert colors
-    if invert:
-        thresh = cv2.bitwise_not(thresh)
+        # Invert colors
+        if invert:
+            thresh = cv2.bitwise_not(thresh)
 
-    # Convert back to RGB
-    thresh_rgb = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
+        # Convert back to RGB
+        thresh_rgb = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
 
-    # Convert to PIL Image
-    processed_pil = Image.fromarray(thresh_rgb)
+        # Convert to PIL Image
+        processed_pil = Image.fromarray(thresh_rgb)
 
-    # Apply Screen Tone Layer 1
-    if screen_tone_1 and screen_tone_pattern_1 != "None":
-        mask1 = generate_mask(gray, screen_tone_area_pattern_1)
-        processed_pil = apply_screen_tone(
-            processed_pil,
-            size=screen_tone_size_1,
-            pattern=screen_tone_pattern_1,
-            mask=mask1,
-            gray_image=gray,
-            color=screen_tone_color_1,
-            density=screen_tone_density_1,
-            pencil_style=pencil_shading_style_1
-        )
+        # Apply Screen Tone Layer 1
+        if screen_tone_1 and screen_tone_pattern_1 != "None":
+            mask1 = generate_mask(gray, screen_tone_area_pattern_1)
+            processed_pil = apply_screen_tone(
+                processed_pil,
+                size=screen_tone_size_1,
+                pattern=screen_tone_pattern_1,
+                mask=mask1,
+                gray_image=gray,
+                color=screen_tone_color_1,
+                density=screen_tone_density_1,
+                pencil_style=pencil_shading_style_1
+            )
 
-    # Apply Screen Tone Layer 2
-    if screen_tone_2 and screen_tone_pattern_2 != "None":
-        mask2 = generate_mask(gray, screen_tone_area_pattern_2)
-        processed_pil = apply_screen_tone(
-            processed_pil,
-            size=screen_tone_size_2,
-            pattern=screen_tone_pattern_2,
-            mask=mask2,
-            gray_image=gray,
-            color=screen_tone_color_2,
-            density=screen_tone_density_2,
-            pencil_style=pencil_shading_style_2
-        )
+        # Apply Screen Tone Layer 2
+        if screen_tone_2 and screen_tone_pattern_2 != "None":
+            mask2 = generate_mask(gray, screen_tone_area_pattern_2)
+            processed_pil = apply_screen_tone(
+                processed_pil,
+                size=screen_tone_size_2,
+                pattern=screen_tone_pattern_2,
+                mask=mask2,
+                gray_image=gray,
+                color=screen_tone_color_2,
+                density=screen_tone_density_2,
+                pencil_style=pencil_shading_style_2
+            )
 
-    return processed_pil
+        return processed_pil
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -553,21 +557,31 @@ def index():
 
     if request.method == 'POST':
         # Receive image file from user
-        file = request.files['image']
+        file = request.files.get('image')
         if file:
+            try:
+                # Validate image
+                img = Image.open(file.stream)
+                img.verify()  # ตรวจสอบว่าเป็นรูปภาพที่ถูกต้อง
+                file.stream.seek(0)  # Reset stream position
+                img = Image.open(file.stream).convert('RGB')
+            except Exception as e:
+                logger.error(f"Invalid image file: {e}")
+                return "ไฟล์ที่อัปโหลดไม่ถูกต้อง. กรุณาอัปโหลดไฟล์รูปภาพที่ถูกต้อง.", 400
+
             try:
                 # Generate a unique ID for the image
                 image_id = str(uuid.uuid4())
 
                 # Save original image
                 original_path = os.path.join(TEMP_DIR, f'original_{image_id}.png')
-                img = Image.open(file.stream).convert('RGB')
-                img.save(original_path)
+                img.save(original_path, format='PNG')
 
                 # Create and save preview image (e.g., max dimension 800px)
+                preview_img = img.copy()
+                preview_img.thumbnail((800, 800), Image.Resampling.LANCZOS)
                 preview_path = os.path.join(TEMP_DIR, f'preview_{image_id}.png')
-                img.thumbnail((800, 800), Image.Resampling.LANCZOS)
-                img.save(preview_path)
+                preview_img.save(preview_path, format='PNG')
 
                 # Process the preview image
                 default_params = {
@@ -580,7 +594,7 @@ def index():
                 }
                 processed_preview = process_image(preview_path, default_params, is_preview=True)
                 processed_preview_path = os.path.join(TEMP_DIR, f'processed_preview_{image_id}.png')
-                processed_preview.save(processed_preview_path)
+                processed_preview.save(processed_preview_path, format='PNG')
 
                 # Store paths in the images dictionary
                 images[image_id] = {
@@ -614,7 +628,9 @@ def index():
                                        processed_size=processed_preview_size)
             except Exception as e:
                 logger.error(f"Error processing uploaded image: {e}")
-                return "Error processing the uploaded image.", 500
+                return "เกิดข้อผิดพลาดในการประมวลผลภาพที่อัปโหลด.", 500
+        else:
+            return "กรุณาอัปโหลดไฟล์รูปภาพ.", 400
     else:
         return render_template('index.html',
                                threshold_methods=threshold_methods,
@@ -680,7 +696,7 @@ def process_route():
         preview_path = images[image_id]['preview']
         processed_preview = process_image(preview_path, params, is_preview=True)
         processed_preview_path = images[image_id]['processed_preview']
-        processed_preview.save(processed_preview_path)
+        processed_preview.save(processed_preview_path, format='PNG')
 
         # Convert to base64
         processed_preview_img = Image.open(processed_preview_path)
@@ -745,7 +761,7 @@ def save_image_route():
 
         # Save processed full image
         processed_full_path = os.path.join(TEMP_DIR, f'processed_full_{image_id}.png')
-        processed_full.save(processed_full_path)
+        processed_full.save(processed_full_path, format='PNG')
 
         # Send the file for download
         return send_file(processed_full_path, mimetype='image/png',
