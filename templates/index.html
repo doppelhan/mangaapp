@@ -10,7 +10,7 @@
             background-color: #f4f4f4;
         }
         .container {
-            max-width: 900px;
+            max-width: 1200px;
             margin: auto;
             background: white;
             padding: 20px;
@@ -34,6 +34,7 @@
         .images div {
             flex: 1 1 45%;
             margin: 10px;
+            text-align: center;
         }
         .images img {
             max-width: 100%;
@@ -44,6 +45,7 @@
         }
         .form-section {
             margin-bottom: 20px;
+            text-align: center;
         }
         .parameter-section {
             margin-top: 20px;
@@ -57,9 +59,13 @@
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
+            justify-content: center;
         }
         .parameter-section label {
             flex: 1 1 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
         }
         .parameter-section input,
         .parameter-section select {
@@ -69,10 +75,12 @@
         }
         .submit-button {
             margin-top: 20px;
+            text-align: center;
         }
         .submit-button button {
             padding: 10px 20px;
             font-size: 16px;
+            cursor: pointer;
         }
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -81,6 +89,13 @@
                 align-items: center;
             }
             .images div {
+                flex: 1 1 100%;
+            }
+            .parameter-section form {
+                flex-direction: column;
+                align-items: center;
+            }
+            .parameter-section label {
                 flex: 1 1 100%;
             }
         }
@@ -149,7 +164,178 @@
                         </select>
                     </label>
 
-                    <!-- เพิ่มพารามิเตอร์อื่นๆ ตามที่ต้องการ -->
+                    <label>
+                        Contrast:
+                        <input type="number" name="contrast" step="0.1" min="0.1" value="{{ default_params.contrast | default(1.0) }}">
+                    </label>
+
+                    <label>
+                        Brightness:
+                        <input type="number" name="brightness" step="0.1" min="0.1" value="{{ default_params.brightness | default(1.0) }}">
+                    </label>
+
+                    <label>
+                        Gamma:
+                        <input type="number" name="gamma" step="0.1" min="0.1" value="{{ default_params.gamma | default(1.0) }}">
+                    </label>
+
+                    <label>
+                        Exposure:
+                        <input type="number" name="exposure" step="0.1" min="0.1" value="{{ default_params.exposure | default(1.0) }}">
+                    </label>
+
+                    <label>
+                        Block Size:
+                        <input type="number" name="block_size" min="3" step="2" value="{{ default_params.block_size | default(11) }}">
+                    </label>
+
+                    <label>
+                        C Value:
+                        <input type="number" name="c_value" min="0" value="{{ default_params.c_value | default(6) }}">
+                    </label>
+
+                    <label>
+                        Invert Colors:
+                        <input type="checkbox" name="invert">
+                    </label>
+
+                    <label>
+                        Sharpen:
+                        <input type="checkbox" name="sharpen">
+                    </label>
+
+                    <label>
+                        Edge Enhance:
+                        <input type="checkbox" name="edge_enhance">
+                    </label>
+
+                    <label>
+                        Histogram Equalization:
+                        <input type="checkbox" name="hist_eq">
+                    </label>
+
+                    <label>
+                        CLAHE:
+                        <input type="checkbox" name="clahe">
+                    </label>
+
+                    <label>
+                        Clip Limit:
+                        <input type="number" name="clip_limit" step="0.1" min="1.0" value="{{ default_params.clip_limit | default(2.0) }}">
+                    </label>
+
+                    <label>
+                        Tile Grid Size:
+                        <input type="number" name="tile_grid_size" min="1" value="{{ default_params.tile_grid_size | default(8) }}">
+                    </label>
+
+                    <label>
+                        Local Contrast:
+                        <input type="checkbox" name="local_contrast">
+                    </label>
+
+                    <label>
+                        Kernel Size:
+                        <input type="number" name="kernel_size" min="3" step="2" value="{{ default_params.kernel_size | default(9) }}">
+                    </label>
+
+                    <!-- Screen Tone Layer 1 -->
+                    <h4>Screen Tone Layer 1</h4>
+                    <label>
+                        Enable Screen Tone Layer 1:
+                        <input type="checkbox" name="screen_tone_1">
+                    </label>
+
+                    <label>
+                        Screen Tone Pattern 1:
+                        <select name="screen_tone_pattern_1">
+                            {% for pattern in screen_tone_patterns %}
+                                <option value="{{ pattern }}">{{ pattern }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label>
+                        Screen Tone Size 1:
+                        <input type="number" name="screen_tone_size_1" min="1" value="{{ default_params.screen_tone_size_1 | default(2) }}">
+                    </label>
+
+                    <label>
+                        Screen Tone Density 1:
+                        <input type="number" name="screen_tone_density_1" min="1" max="100" value="{{ default_params.screen_tone_density_1 | default(50) }}">
+                    </label>
+
+                    <label>
+                        Screen Tone Area Pattern 1:
+                        <select name="screen_tone_area_pattern_1">
+                            {% for pattern in screen_tone_area_patterns %}
+                                <option value="{{ pattern }}">{{ pattern }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label>
+                        Pencil Shading Style 1:
+                        <select name="pencil_shading_style_1">
+                            {% for style in pencil_shading_styles %}
+                                <option value="{{ style }}">{{ style }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label>
+                        Screen Tone Color 1:
+                        <input type="color" name="screen_tone_color_1" value="#323232">
+                    </label>
+
+                    <!-- Screen Tone Layer 2 -->
+                    <h4>Screen Tone Layer 2</h4>
+                    <label>
+                        Enable Screen Tone Layer 2:
+                        <input type="checkbox" name="screen_tone_2">
+                    </label>
+
+                    <label>
+                        Screen Tone Pattern 2:
+                        <select name="screen_tone_pattern_2">
+                            {% for pattern in screen_tone_patterns %}
+                                <option value="{{ pattern }}">{{ pattern }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label>
+                        Screen Tone Size 2:
+                        <input type="number" name="screen_tone_size_2" min="1" value="{{ default_params.screen_tone_size_2 | default(2) }}">
+                    </label>
+
+                    <label>
+                        Screen Tone Density 2:
+                        <input type="number" name="screen_tone_density_2" min="1" max="100" value="{{ default_params.screen_tone_density_2 | default(50) }}">
+                    </label>
+
+                    <label>
+                        Screen Tone Area Pattern 2:
+                        <select name="screen_tone_area_pattern_2">
+                            {% for pattern in screen_tone_area_patterns %}
+                                <option value="{{ pattern }}">{{ pattern }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label>
+                        Pencil Shading Style 2:
+                        <select name="pencil_shading_style_2">
+                            {% for style in pencil_shading_styles %}
+                                <option value="{{ style }}">{{ style }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label>
+                        Screen Tone Color 2:
+                        <input type="color" name="screen_tone_color_2" value="#505050">
+                    </label>
 
                     <div class="submit-button">
                         <button type="button" onclick="processImage()">ประมวลผล</button>
@@ -168,7 +354,12 @@
             // แปลง FormData เป็น JSON
             const data = {};
             formData.forEach((value, key) => {
-                data[key] = value;
+                // แปลงค่าจาก checkbox เป็น boolean
+                if (value === 'on') {
+                    data[key] = true;
+                } else {
+                    data[key] = value;
+                }
             });
 
             // ส่งคำขอผ่าน AJAX
@@ -186,6 +377,8 @@
                     const processedImg = document.querySelector('img[alt="Processed Image"]');
                     if (processedImg) {
                         processedImg.src = 'data:image/png;base64,' + data.image;
+                        // สามารถแสดงขนาดของภาพได้ถ้าต้องการ
+                        // console.log('Processed Image Size:', data.size);
                     }
                 } else {
                     // แสดงข้อความข้อผิดพลาด

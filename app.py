@@ -562,250 +562,247 @@ def process_image(image_path, params, is_preview=True):
         logger.info(f"Processed image: {image_path} with params: {params}")
         return processed_pil
 
-    except Exception as e:
-        logger.error(f"Error in process_image: {e}")
-        raise e
+    @app.route('/', methods=['GET', 'POST'])
+    def index():
+        global images
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    global images
+        if request.method == 'POST':
+            # รับไฟล์ภาพจากผู้ใช้
+            file = request.files.get('image')
+            if file:
+                try:
+                    # ตรวจสอบว่าเป็นไฟล์ภาพที่ถูกต้อง
+                    img = Image.open(file.stream)
+                    img.verify()  # ตรวจสอบว่าเป็นรูปภาพที่ถูกต้อง
+                    file.stream.seek(0)  # Reset stream position
+                    img = Image.open(file.stream).convert('RGB')
+                except Exception as e:
+                    logger.error(f"Invalid image file: {e}")
+                    return render_template('index.html', error="ไฟล์ที่อัปโหลดไม่ถูกต้อง. กรุณาอัปโหลดไฟล์รูปภาพที่ถูกต้อง."), 400
 
-    if request.method == 'POST':
-        # Receive image file from user
-        file = request.files.get('image')
-        if file:
-            try:
-                # Validate image
-                img = Image.open(file.stream)
-                img.verify()  # ตรวจสอบว่าเป็นรูปภาพที่ถูกต้อง
-                file.stream.seek(0)  # Reset stream position
-                img = Image.open(file.stream).convert('RGB')
-            except Exception as e:
-                logger.error(f"Invalid image file: {e}")
-                return render_template('index.html', error="ไฟล์ที่อัปโหลดไม่ถูกต้อง. กรุณาอัปโหลดไฟล์รูปภาพที่ถูกต้อง."), 400
+                try:
+                    # สร้าง UUID สำหรับภาพ
+                    image_id = str(uuid.uuid4())
 
-            try:
-                # Generate a unique ID for the image
-                image_id = str(uuid.uuid4())
+                    # บันทึกภาพต้นฉบับ
+                    original_path = os.path.join(TEMP_DIR, f'original_{image_id}.png')
+                    img.save(original_path, format='PNG')
 
-                # Save original image
-                original_path = os.path.join(TEMP_DIR, f'original_{image_id}.png')
-                img.save(original_path, format='PNG')
+                    # สร้างและบันทึกภาพ preview (ขนาดจริง แต่สามารถปรับได้ตามต้องการ)
+                    preview_img = img.copy()
+                    # ถ้าต้องการขนาดจริง ให้คอมเมนต์บรรทัดด้านล่าง
+                    # preview_img.thumbnail((800, 800), Image.Resampling.LANCZOS)
+                    preview_path = os.path.join(TEMP_DIR, f'preview_{image_id}.png')
+                    preview_img.save(preview_path, format='PNG')
 
-                # Create and save preview image (e.g., max dimension 800px)
-                preview_img = img.copy()
-                preview_img.thumbnail((800, 800), Image.Resampling.LANCZOS)
-                preview_path = os.path.join(TEMP_DIR, f'preview_{image_id}.png')
-                preview_img.save(preview_path, format='PNG')
+                    # ประมวลผลภาพ preview
+                    default_params = {
+                        'method': 'Special Adaptive Thresholding',
+                        'c_value': 6,
+                        'screen_tone_size_1': 2,
+                        'screen_tone_density_1': 50,
+                        'screen_tone_size_2': 2,
+                        'screen_tone_density_2': 50
+                    }
+                    processed_preview = process_image(preview_path, default_params, is_preview=True)
+                    processed_preview_path = os.path.join(TEMP_DIR, f'processed_preview_{image_id}.png')
+                    processed_preview.save(processed_preview_path, format='PNG')
 
-                # Process the preview image
-                default_params = {
-                    'method': 'Special Adaptive Thresholding',
-                    'c_value': 6,
-                    'screen_tone_size_1': 2,
-                    'screen_tone_density_1': 50,
-                    'screen_tone_size_2': 2,
-                    'screen_tone_density_2': 50
-                }
-                processed_preview = process_image(preview_path, default_params, is_preview=True)
-                processed_preview_path = os.path.join(TEMP_DIR, f'processed_preview_{image_id}.png')
-                processed_preview.save(processed_preview_path, format='PNG')
+                    # เก็บ path ของภาพใน dictionary
+                    images[image_id] = {
+                        'original': original_path,
+                        'preview': preview_path,
+                        'processed_preview': processed_preview_path
+                    }
 
-                # Store paths in the images dictionary
-                images[image_id] = {
-                    'original': original_path,
-                    'preview': preview_path,
-                    'processed_preview': processed_preview_path
-                }
+                    # แปลงภาพเป็น base64
+                    original_img = Image.open(original_path)
+                    original_img_str = image_to_base64(original_img)
+                    if original_img_str is None:
+                        return render_template('index.html', error="เกิดข้อผิดพลาดในการแปลงภาพต้นฉบับ."), 500
 
-                # Convert images to base64
-                original_img = Image.open(original_path)
-                original_img_str = image_to_base64(original_img)
-                if original_img_str is None:
-                    return render_template('index.html', error="เกิดข้อผิดพลาดในการแปลงภาพต้นฉบับ."), 500
+                    processed_preview_img = Image.open(processed_preview_path)
+                    processed_preview_img_str = image_to_base64(processed_preview_img)
+                    if processed_preview_img_str is None:
+                        return render_template('index.html', error="เกิดข้อผิดพลาดในการแปลงภาพที่ประมวลผลแล้ว."), 500
 
-                processed_preview_img = Image.open(processed_preview_path)
-                processed_preview_img_str = image_to_base64(processed_preview_img)
-                if processed_preview_img_str is None:
-                    return render_template('index.html', error="เกิดข้อผิดพลาดในการแปลงภาพที่ประมวลผลแล้ว."), 500
+                    # ขนาดของภาพ
+                    original_size = original_img.size
+                    processed_preview_size = processed_preview_img.size
 
-                # Get sizes
-                original_size = original_img.size
-                processed_preview_size = processed_preview_img.size
-
-                return render_template('index.html',
-                                       image_id=image_id,
-                                       original_image=original_img_str,
-                                       processed_image=processed_preview_img_str,
-                                       threshold_methods=threshold_methods,
-                                       noise_reduction_methods=noise_reduction_methods,
-                                       screen_tone_patterns=screen_tone_patterns,
-                                       screen_tone_area_patterns=screen_tone_area_patterns,
-                                       pencil_shading_styles=pencil_shading_styles,
-                                       default_params=default_params,
-                                       original_size=original_size,
-                                       processed_size=processed_preview_size)
-            except Exception as e:
-                logger.error(f"Error processing uploaded image: {e}")
-                return render_template('index.html', error="เกิดข้อผิดพลาดในการประมวลผลภาพที่อัปโหลด."), 500
+                    return render_template('index.html',
+                                           image_id=image_id,
+                                           original_image=original_img_str,
+                                           processed_image=processed_preview_img_str,
+                                           threshold_methods=threshold_methods,
+                                           noise_reduction_methods=noise_reduction_methods,
+                                           screen_tone_patterns=screen_tone_patterns,
+                                           screen_tone_area_patterns=screen_tone_area_patterns,
+                                           pencil_shading_styles=pencil_shading_styles,
+                                           default_params=default_params,
+                                           original_size=original_size,
+                                           processed_size=processed_preview_size)
+                except Exception as e:
+                    logger.error(f"Error processing uploaded image: {e}")
+                    return render_template('index.html', error="เกิดข้อผิดพลาดในการประมวลผลภาพที่อัปโหลด."), 500
+            else:
+                return render_template('index.html', error="กรุณาอัปโหลดไฟล์รูปภาพ."), 400
         else:
-            return render_template('index.html', error="กรุณาอัปโหลดไฟล์รูปภาพ."), 400
-    else:
-        return render_template('index.html',
-                               threshold_methods=threshold_methods,
-                               noise_reduction_methods=noise_reduction_methods,
-                               screen_tone_patterns=screen_tone_patterns,
-                               screen_tone_area_patterns=screen_tone_area_patterns,
-                               pencil_shading_styles=pencil_shading_styles,
-                               default_params={
-                                   'method': 'Special Adaptive Thresholding',
-                                   'c_value': 6,
-                                   'screen_tone_size_1': 2,
-                                   'screen_tone_density_1': 50,
-                                   'screen_tone_size_2': 2,
-                                   'screen_tone_density_2': 50
-                               })
+            return render_template('index.html',
+                                   threshold_methods=threshold_methods,
+                                   noise_reduction_methods=noise_reduction_methods,
+                                   screen_tone_patterns=screen_tone_patterns,
+                                   screen_tone_area_patterns=screen_tone_area_patterns,
+                                   pencil_shading_styles=pencil_shading_styles,
+                                   default_params={
+                                       'method': 'Special Adaptive Thresholding',
+                                       'c_value': 6,
+                                       'screen_tone_size_1': 2,
+                                       'screen_tone_density_1': 50,
+                                       'screen_tone_size_2': 2,
+                                       'screen_tone_density_2': 50
+                                   })
 
-@app.route('/process', methods=['POST'])
-def process_route():
-    global images
-    data = request.json
-    image_id = data.get('image_id')
-    if not image_id or image_id not in images:
-        return jsonify({'status': 'error', 'message': 'Invalid image ID.'}), 400
+    @app.route('/process', methods=['POST'])
+    def process_route():
+        global images
+        data = request.json
+        image_id = data.get('image_id')
+        if not image_id or image_id not in images:
+            return jsonify({'status': 'error', 'message': 'Invalid image ID.'}), 400
 
-    try:
-        # Get parameters
-        params = {
-            'threshold': data.get('threshold', 128),
-            'contrast': data.get('contrast', 1.0),
-            'brightness': data.get('brightness', 1.0),
-            'gamma': data.get('gamma', 1.0),
-            'exposure': data.get('exposure', 1.0),
-            'method': data.get('method', 'Special Adaptive Thresholding'),
-            'block_size': data.get('block_size', 11),
-            'c_value': data.get('c_value', 6),
-            'invert': data.get('invert', False),
-            'noise_reduction': data.get('noise_reduction', 'None'),
-            'sharpen': data.get('sharpen', False),
-            'edge_enhance': data.get('edge_enhance', False),
-            'hist_eq': data.get('hist_eq', False),
-            'clahe': data.get('clahe', False),
-            'clip_limit': data.get('clip_limit', 2.0),
-            'tile_grid_size': data.get('tile_grid_size', 8),
-            'local_contrast': data.get('local_contrast', False),
-            'kernel_size': data.get('kernel_size', 9),
-            'screen_tone_1': data.get('screen_tone_1', False),
-            'screen_tone_pattern_1': data.get('screen_tone_pattern_1', 'None'),
-            'screen_tone_size_1': data.get('screen_tone_size_1', 2),
-            'screen_tone_density_1': data.get('screen_tone_density_1', 50),
-            'screen_tone_area_pattern_1': data.get('screen_tone_area_pattern_1', 'Global Darkness'),
-            'pencil_shading_style_1': data.get('pencil_shading_style_1', 'Light'),
-            'screen_tone_color_1': data.get('screen_tone_color_1', '#323232'),
-            'screen_tone_2': data.get('screen_tone_2', False),
-            'screen_tone_pattern_2': data.get('screen_tone_pattern_2', 'None'),
-            'screen_tone_size_2': data.get('screen_tone_size_2', 2),
-            'screen_tone_density_2': data.get('screen_tone_density_2', 50),
-            'screen_tone_area_pattern_2': data.get('screen_tone_area_pattern_2', 'Shadow Regions'),
-            'pencil_shading_style_2': data.get('pencil_shading_style_2', 'Medium'),
-            'screen_tone_color_2': data.get('screen_tone_color_2', '#505050'),
-        }
+        try:
+            # รับพารามิเตอร์
+            params = {
+                'threshold': data.get('threshold', 128),
+                'contrast': data.get('contrast', 1.0),
+                'brightness': data.get('brightness', 1.0),
+                'gamma': data.get('gamma', 1.0),
+                'exposure': data.get('exposure', 1.0),
+                'method': data.get('method', 'Special Adaptive Thresholding'),
+                'block_size': data.get('block_size', 11),
+                'c_value': data.get('c_value', 6),
+                'invert': data.get('invert', False),
+                'noise_reduction': data.get('noise_reduction', 'None'),
+                'sharpen': data.get('sharpen', False),
+                'edge_enhance': data.get('edge_enhance', False),
+                'hist_eq': data.get('hist_eq', False),
+                'clahe': data.get('clahe', False),
+                'clip_limit': data.get('clip_limit', 2.0),
+                'tile_grid_size': data.get('tile_grid_size', 8),
+                'local_contrast': data.get('local_contrast', False),
+                'kernel_size': data.get('kernel_size', 9),
+                'screen_tone_1': data.get('screen_tone_1', False),
+                'screen_tone_pattern_1': data.get('screen_tone_pattern_1', 'None'),
+                'screen_tone_size_1': data.get('screen_tone_size_1', 2),
+                'screen_tone_density_1': data.get('screen_tone_density_1', 50),
+                'screen_tone_area_pattern_1': data.get('screen_tone_area_pattern_1', 'Global Darkness'),
+                'pencil_shading_style_1': data.get('pencil_shading_style_1', 'Light'),
+                'screen_tone_color_1': data.get('screen_tone_color_1', '#323232'),
+                'screen_tone_2': data.get('screen_tone_2', False),
+                'screen_tone_pattern_2': data.get('screen_tone_pattern_2', 'None'),
+                'screen_tone_size_2': data.get('screen_tone_size_2', 2),
+                'screen_tone_density_2': data.get('screen_tone_density_2', 50),
+                'screen_tone_area_pattern_2': data.get('screen_tone_area_pattern_2', 'Shadow Regions'),
+                'pencil_shading_style_2': data.get('pencil_shading_style_2', 'Medium'),
+                'screen_tone_color_2': data.get('screen_tone_color_2', '#505050'),
+            }
 
-        # Process the preview image
-        preview_path = images[image_id]['preview']
-        processed_preview = process_image(preview_path, params, is_preview=True)
-        processed_preview_path = images[image_id]['processed_preview']
-        processed_preview.save(processed_preview_path, format='PNG')
+            # ประมวลผลภาพ preview
+            preview_path = images[image_id]['preview']
+            processed_preview = process_image(preview_path, params, is_preview=True)
+            processed_preview_path = images[image_id]['processed_preview']
+            processed_preview.save(processed_preview_path, format='PNG')
 
-        # Convert to base64
-        processed_preview_img = Image.open(processed_preview_path)
-        processed_preview_img_str = image_to_base64(processed_preview_img)
-        if processed_preview_img_str is None:
-            return jsonify({'status': 'error', 'message': 'Error converting processed image.'}), 500
+            # แปลงภาพเป็น base64
+            processed_preview_img = Image.open(processed_preview_path)
+            processed_preview_img_str = image_to_base64(processed_preview_img)
+            if processed_preview_img_str is None:
+                return jsonify({'status': 'error', 'message': 'Error converting processed image.'}), 500
 
-        # Get size
-        processed_preview_size = processed_preview_img.size
+            # ขนาดของภาพ
+            processed_preview_size = processed_preview_img.size
 
-        return jsonify({'status': 'done', 'image': processed_preview_img_str, 'size': processed_preview_size})
-    except Exception as e:
-        logger.error(f"Error processing image: {e}")
-        return jsonify({'status': 'error', 'message': 'Error processing image.'}), 500
+            return jsonify({'status': 'done', 'image': processed_preview_img_str, 'size': processed_preview_size})
+        except Exception as e:
+            logger.error(f"Error processing image: {e}")
+            return jsonify({'status': 'error', 'message': 'Error processing image.'}), 500
 
-@app.route('/save', methods=['POST'])
-def save_image_route():
-    global images
-    data = request.json
-    image_id = data.get('image_id')
-    if not image_id or image_id not in images:
-        return jsonify({'status': 'error', 'message': 'Invalid image ID.'}), 400
+    @app.route('/save', methods=['POST'])
+    def save_image_route():
+        global images
+        data = request.json
+        image_id = data.get('image_id')
+        if not image_id or image_id not in images:
+            return jsonify({'status': 'error', 'message': 'Invalid image ID.'}), 400
 
-    try:
-        # Get parameters
-        params = {
-            'threshold': data.get('threshold', 128),
-            'contrast': data.get('contrast', 1.0),
-            'brightness': data.get('brightness', 1.0),
-            'gamma': data.get('gamma', 1.0),
-            'exposure': data.get('exposure', 1.0),
-            'method': data.get('method', 'Special Adaptive Thresholding'),
-            'block_size': data.get('block_size', 11),
-            'c_value': data.get('c_value', 6),
-            'invert': data.get('invert', False),
-            'noise_reduction': data.get('noise_reduction', 'None'),
-            'sharpen': data.get('sharpen', False),
-            'edge_enhance': data.get('edge_enhance', False),
-            'hist_eq': data.get('hist_eq', False),
-            'clahe': data.get('clahe', False),
-            'clip_limit': data.get('clip_limit', 2.0),
-            'tile_grid_size': data.get('tile_grid_size', 8),
-            'local_contrast': data.get('local_contrast', False),
-            'kernel_size': data.get('kernel_size', 9),
-            'screen_tone_1': data.get('screen_tone_1', False),
-            'screen_tone_pattern_1': data.get('screen_tone_pattern_1', 'None'),
-            'screen_tone_size_1': data.get('screen_tone_size_1', 2),
-            'screen_tone_density_1': data.get('screen_tone_density_1', 50),
-            'screen_tone_area_pattern_1': data.get('screen_tone_area_pattern_1', 'Global Darkness'),
-            'pencil_shading_style_1': data.get('pencil_shading_style_1', 'Light'),
-            'screen_tone_color_1': data.get('screen_tone_color_1', '#323232'),
-            'screen_tone_2': data.get('screen_tone_2', False),
-            'screen_tone_pattern_2': data.get('screen_tone_pattern_2', 'None'),
-            'screen_tone_size_2': data.get('screen_tone_size_2', 2),
-            'screen_tone_density_2': data.get('screen_tone_density_2', 50),
-            'screen_tone_area_pattern_2': data.get('screen_tone_area_pattern_2', 'Shadow Regions'),
-            'pencil_shading_style_2': data.get('pencil_shading_style_2', 'Medium'),
-            'screen_tone_color_2': data.get('screen_tone_color_2', '#505050'),
-        }
+        try:
+            # รับพารามิเตอร์
+            params = {
+                'threshold': data.get('threshold', 128),
+                'contrast': data.get('contrast', 1.0),
+                'brightness': data.get('brightness', 1.0),
+                'gamma': data.get('gamma', 1.0),
+                'exposure': data.get('exposure', 1.0),
+                'method': data.get('method', 'Special Adaptive Thresholding'),
+                'block_size': data.get('block_size', 11),
+                'c_value': data.get('c_value', 6),
+                'invert': data.get('invert', False),
+                'noise_reduction': data.get('noise_reduction', 'None'),
+                'sharpen': data.get('sharpen', False),
+                'edge_enhance': data.get('edge_enhance', False),
+                'hist_eq': data.get('hist_eq', False),
+                'clahe': data.get('clahe', False),
+                'clip_limit': data.get('clip_limit', 2.0),
+                'tile_grid_size': data.get('tile_grid_size', 8),
+                'local_contrast': data.get('local_contrast', False),
+                'kernel_size': data.get('kernel_size', 9),
+                'screen_tone_1': data.get('screen_tone_1', False),
+                'screen_tone_pattern_1': data.get('screen_tone_pattern_1', 'None'),
+                'screen_tone_size_1': data.get('screen_tone_size_1', 2),
+                'screen_tone_density_1': data.get('screen_tone_density_1', 50),
+                'screen_tone_area_pattern_1': data.get('screen_tone_area_pattern_1', 'Global Darkness'),
+                'pencil_shading_style_1': data.get('pencil_shading_style_1', 'Light'),
+                'screen_tone_color_1': data.get('screen_tone_color_1', '#323232'),
+                'screen_tone_2': data.get('screen_tone_2', False),
+                'screen_tone_pattern_2': data.get('screen_tone_pattern_2', 'None'),
+                'screen_tone_size_2': data.get('screen_tone_size_2', 2),
+                'screen_tone_density_2': data.get('screen_tone_density_2', 50),
+                'screen_tone_area_pattern_2': data.get('screen_tone_area_pattern_2', 'Shadow Regions'),
+                'pencil_shading_style_2': data.get('pencil_shading_style_2', 'Medium'),
+                'screen_tone_color_2': data.get('screen_tone_color_2', '#505050'),
+            }
 
-        # Process the original image
-        original_path = images[image_id]['original']
-        processed_full = process_image(original_path, params, is_preview=False)
+            # ประมวลผลภาพต้นฉบับ
+            original_path = images[image_id]['original']
+            processed_full = process_image(original_path, params, is_preview=False)
 
-        # Save processed full image
-        processed_full_path = os.path.join(TEMP_DIR, f'processed_full_{image_id}.png')
-        processed_full.save(processed_full_path, format='PNG')
+            # บันทึกภาพที่ประมวลผลเต็มรูปแบบ
+            processed_full_path = os.path.join(TEMP_DIR, f'processed_full_{image_id}.png')
+            processed_full.save(processed_full_path, format='PNG')
 
-        # Send the file for download
-        return send_file(processed_full_path, mimetype='image/png',
-                         as_attachment=True, download_name='processed_image.png')
-    except Exception as e:
-        logger.error(f"Error saving image: {e}")
-        return jsonify({'status': 'error', 'message': 'Error saving image.'}), 500
+            # ส่งไฟล์ให้ดาวน์โหลด
+            return send_file(processed_full_path, mimetype='image/png',
+                             as_attachment=True, download_name='processed_image.png')
+        except Exception as e:
+            logger.error(f"Error saving image: {e}")
+            return jsonify({'status': 'error', 'message': 'Error saving image.'}), 500
 
-# Error handler for RequestEntityTooLarge (413)
-@app.errorhandler(RequestEntityTooLarge)
-def handle_request_entity_too_large(error):
-    logger.error(f"File too large: {error}")
-    return render_template('index.html', error="ไฟล์ที่คุณอัปโหลดมีขนาดใหญ่เกินไป. โปรดลองอัปโหลดไฟล์ที่มีขนาดไม่เกิน 100MB."), 413
+    # Error handler for RequestEntityTooLarge (413)
+    @app.errorhandler(RequestEntityTooLarge)
+    def handle_request_entity_too_large(error):
+        logger.error(f"File too large: {error}")
+        return render_template('index.html', error="ไฟล์ที่คุณอัปโหลดมีขนาดใหญ่เกินไป. โปรดลองอัปโหลดไฟล์ที่มีขนาดไม่เกิน 100MB."), 413
 
-# Error handler for general exceptions
-@app.errorhandler(Exception)
-def handle_exception(e):
-    if isinstance(e, HTTPException):
-        return jsonify(error=e.description), e.code
-    else:
-        # Log the error
-        logger.error(f"Unhandled Exception: {e}")
-        return jsonify(error="Internal Server Error"), 500
+    # Error handler for general exceptions
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        if isinstance(e, HTTPException):
+            return jsonify(error=e.description), e.code
+        else:
+            # Log the error
+            logger.error(f"Unhandled Exception: {e}")
+            return jsonify(error="Internal Server Error"), 500
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    if __name__ == '__main__':
+        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
