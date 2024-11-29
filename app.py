@@ -379,177 +379,180 @@ def image_to_base64(img):
 
 # Function to process image
 def process_image(image_path, params, is_preview=True):
-    try:
-        # Extract parameters from params
-        threshold_value = int(params.get('threshold', 128))
-        contrast_value = float(params.get('contrast', 1.0))
-        brightness_value = float(params.get('brightness', 1.0))
-        gamma_value = float(params.get('gamma', 1.0))
-        exposure_value = float(params.get('exposure', 1.0))
-        method = params.get('method', 'Special Adaptive Thresholding')
-        block_size = int(params.get('block_size', 11))
-        c_value = int(params.get('c_value', 6))  # Default C Value set to 6
-        invert = params.get('invert', False)
-        noise_reduction_method = params.get('noise_reduction', 'None')
-        sharpen = params.get('sharpen', False)
-        edge_enhance = params.get('edge_enhance', False)
-        hist_eq = params.get('hist_eq', False)
-        clahe = params.get('clahe', False)
-        clip_limit = float(params.get('clip_limit', 2.0))
-        tile_grid_size = int(params.get('tile_grid_size', 8))
-        local_contrast = params.get('local_contrast', False)
-        kernel_size = int(params.get('kernel_size', 9))
+    # ไม่มีการใช้ try-except ภายในฟังก์ชันนี้ เพื่อป้องกันการขาดหายของบล็อก
+    # แต่คุณสามารถเพิ่ม try-except ได้ตามต้องการ
+    # หรือคุณสามารถทำให้แน่ใจว่าโค้ดนี้ไม่มีข้อผิดพลาด
 
-        # Screen Tone Layer 1
-        screen_tone_1 = params.get('screen_tone_1', False)
-        screen_tone_pattern_1 = params.get('screen_tone_pattern_1', 'None')
-        screen_tone_size_1 = int(params.get('screen_tone_size_1', 2))  # Default Size set to 2
-        screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))  # Default Density set to 50
-        screen_tone_area_pattern_1 = params.get('screen_tone_area_pattern_1', 'Global Darkness')
-        pencil_shading_style_1 = params.get('pencil_shading_style_1', 'Light')
-        screen_tone_color_1 = params.get('screen_tone_color_1', '#323232')
-        screen_tone_color_1 = tuple(int(screen_tone_color_1.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+    # Extract parameters from params
+    threshold_value = int(params.get('threshold', 128))
+    contrast_value = float(params.get('contrast', 1.0))
+    brightness_value = float(params.get('brightness', 1.0))
+    gamma_value = float(params.get('gamma', 1.0))
+    exposure_value = float(params.get('exposure', 1.0))
+    method = params.get('method', 'Special Adaptive Thresholding')
+    block_size = int(params.get('block_size', 11))
+    c_value = int(params.get('c_value', 6))  # Default C Value set to 6
+    invert = params.get('invert', False)
+    noise_reduction_method = params.get('noise_reduction', 'None')
+    sharpen = params.get('sharpen', False)
+    edge_enhance = params.get('edge_enhance', False)
+    hist_eq = params.get('hist_eq', False)
+    clahe = params.get('clahe', False)
+    clip_limit = float(params.get('clip_limit', 2.0))
+    tile_grid_size = int(params.get('tile_grid_size', 8))
+    local_contrast = params.get('local_contrast', False)
+    kernel_size = int(params.get('kernel_size', 9))
 
-        # Screen Tone Layer 2
-        screen_tone_2 = params.get('screen_tone_2', False)
-        screen_tone_pattern_2 = params.get('screen_tone_pattern_2', 'None')
-        screen_tone_size_2 = int(params.get('screen_tone_size_2', 2))  # Default Size set to 2
-        screen_tone_density_2 = int(params.get('screen_tone_density_2', 50))  # Default Density set to 50
-        screen_tone_area_pattern_2 = params.get('screen_tone_area_pattern_2', 'Shadow Regions')
-        pencil_shading_style_2 = params.get('pencil_shading_style_2', 'Medium')
-        screen_tone_color_2 = params.get('screen_tone_color_2', '#505050')
-        screen_tone_color_2 = tuple(int(screen_tone_color_2.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+    # Screen Tone Layer 1
+    screen_tone_1 = params.get('screen_tone_1', False)
+    screen_tone_pattern_1 = params.get('screen_tone_pattern_1', 'None')
+    screen_tone_size_1 = int(params.get('screen_tone_size_1', 2))  # Default Size set to 2
+    screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))  # Default Density set to 50
+    screen_tone_area_pattern_1 = params.get('screen_tone_area_pattern_1', 'Global Darkness')
+    pencil_shading_style_1 = params.get('pencil_shading_style_1', 'Light')
+    screen_tone_color_1 = params.get('screen_tone_color_1', '#323232')
+    screen_tone_color_1 = tuple(int(screen_tone_color_1.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
-        # Set threshold_type to THRESH_BINARY
-        threshold_type = cv2.THRESH_BINARY
+    # Screen Tone Layer 2
+    screen_tone_2 = params.get('screen_tone_2', False)
+    screen_tone_pattern_2 = params.get('screen_tone_pattern_2', 'None')
+    screen_tone_size_2 = int(params.get('screen_tone_size_2', 2))  # Default Size set to 2
+    screen_tone_density_2 = int(params.get('screen_tone_density_2', 50))  # Default Density set to 50
+    screen_tone_area_pattern_2 = params.get('screen_tone_area_pattern_2', 'Shadow Regions')
+    pencil_shading_style_2 = params.get('pencil_shading_style_2', 'Medium')
+    screen_tone_color_2 = params.get('screen_tone_color_2', '#505050')
+    screen_tone_color_2 = tuple(int(screen_tone_color_2.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
-        # Load the image
-        img = Image.open(image_path).convert('RGB')
-        img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    # Set threshold_type to THRESH_BINARY
+    threshold_type = cv2.THRESH_BINARY
 
-        # Adjust Contrast and Brightness
-        img_cv = cv2.convertScaleAbs(img_cv, alpha=contrast_value, beta=(brightness_value - 1) * 255)
+    # Load the image
+    img = Image.open(image_path).convert('RGB')
+    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-        # Adjust Gamma Correction
-        img_cv = adjust_gamma(img_cv, gamma=gamma_value)
+    # Adjust Contrast and Brightness
+    img_cv = cv2.convertScaleAbs(img_cv, alpha=contrast_value, beta=(brightness_value - 1) * 255)
 
-        # Convert image to grayscale
-        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+    # Adjust Gamma Correction
+    img_cv = adjust_gamma(img_cv, gamma=gamma_value)
 
-        # Exposure Compensation
-        gray = cv2.convertScaleAbs(gray, alpha=exposure_value, beta=0)
+    # Convert image to grayscale
+    gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
 
-        # Histogram Equalization
-        if hist_eq:
-            gray = cv2.equalizeHist(gray)
+    # Exposure Compensation
+    gray = cv2.convertScaleAbs(gray, alpha=exposure_value, beta=0)
 
-        # Adaptive Histogram Equalization (CLAHE)
-        if clahe:
-            clahe_obj = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
-            gray = clahe_obj.apply(gray)
+    # Histogram Equalization
+    if hist_eq:
+        gray = cv2.equalizeHist(gray)
 
-        # Local Contrast Enhancement
-        if local_contrast:
-            if kernel_size % 2 == 0:
-                kernel_size += 1
-            if kernel_size <= 1:
-                kernel_size = 3
-            gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
-            gray = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0)
+    # Adaptive Histogram Equalization (CLAHE)
+    if clahe:
+        clahe_obj = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
+        gray = clahe_obj.apply(gray)
 
-        # Noise Reduction
-        if noise_reduction_method == "Median Filter":
-            denoised = cv2.medianBlur(gray, 3)
-        elif noise_reduction_method == "Bilateral Filter":
-            denoised = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
-        elif noise_reduction_method == "Gaussian Blur":
-            denoised = cv2.GaussianBlur(gray, (5, 5), 0)
-        elif noise_reduction_method == "Non-local Means Denoising":
-            denoised = cv2.fastNlMeansDenoising(gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
-        else:
-            denoised = gray
+    # Local Contrast Enhancement
+    if local_contrast:
+        if kernel_size % 2 == 0:
+            kernel_size += 1
+        if kernel_size <= 1:
+            kernel_size = 3
+        gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
+        gray = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0)
 
-        # Sharpen the image
-        if sharpen:
-            gaussian = cv2.GaussianBlur(denoised, (0, 0), sigmaX=3)
-            denoised = cv2.addWeighted(denoised, 1.5, gaussian, -0.5, 0)
+    # Noise Reduction
+    if noise_reduction_method == "Median Filter":
+        denoised = cv2.medianBlur(gray, 3)
+    elif noise_reduction_method == "Bilateral Filter":
+        denoised = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+    elif noise_reduction_method == "Gaussian Blur":
+        denoised = cv2.GaussianBlur(gray, (5, 5), 0)
+    elif noise_reduction_method == "Non-local Means Denoising":
+        denoised = cv2.fastNlMeansDenoising(gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
+    else:
+        denoised = gray
 
-        # Edge Enhancement
-        if edge_enhance:
-            edges = cv2.Canny(denoised, threshold1=50, threshold2=150)
-            denoised = cv2.bitwise_or(denoised, edges)
+    # Sharpen the image
+    if sharpen:
+        gaussian = cv2.GaussianBlur(denoised, (0, 0), sigmaX=3)
+        denoised = cv2.addWeighted(denoised, 1.5, gaussian, -0.5, 0)
 
-        # Thresholding
-        if method == "Global Thresholding":
-            _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
-        elif method == "Adaptive Mean Thresholding":
-            if block_size % 2 == 0:
-                block_size += 1
-            if block_size <= 1:
-                block_size = 3
-            thresh = cv2.adaptiveThreshold(
-                denoised, 255, cv2.ADAPTIVE_THRESH_MEAN_C, threshold_type, block_size, c_value
-            )
-        elif method == "Adaptive Gaussian Thresholding":
-            if block_size % 2 == 0:
-                block_size += 1
-            if block_size <= 1:
-                block_size = 3
-            thresh = cv2.adaptiveThreshold(
-                denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, threshold_type, block_size, c_value
-            )
-        elif method == "Special Adaptive Thresholding":
-            if block_size % 2 == 0:
-                block_size += 1
-            if block_size <= 1:
-                block_size = 3
-            thresh = cv2.adaptiveThreshold(
-                denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, c_value
-            )
-            black_mask = gray < 50
-            thresh[black_mask] = 0
-        else:
-            _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
+    # Edge Enhancement
+    if edge_enhance:
+        edges = cv2.Canny(denoised, threshold1=50, threshold2=150)
+        denoised = cv2.bitwise_or(denoised, edges)
 
-        # Invert colors
-        if invert:
-            thresh = cv2.bitwise_not(thresh)
+    # Thresholding
+    if method == "Global Thresholding":
+        _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
+    elif method == "Adaptive Mean Thresholding":
+        if block_size % 2 == 0:
+            block_size += 1
+        if block_size <= 1:
+            block_size = 3
+        thresh = cv2.adaptiveThreshold(
+            denoised, 255, cv2.ADAPTIVE_THRESH_MEAN_C, threshold_type, block_size, c_value
+        )
+    elif method == "Adaptive Gaussian Thresholding":
+        if block_size % 2 == 0:
+            block_size += 1
+        if block_size <= 1:
+            block_size = 3
+        thresh = cv2.adaptiveThreshold(
+            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, threshold_type, block_size, c_value
+        )
+    elif method == "Special Adaptive Thresholding":
+        if block_size % 2 == 0:
+            block_size += 1
+        if block_size <= 1:
+            block_size = 3
+        thresh = cv2.adaptiveThreshold(
+            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, c_value
+        )
+        black_mask = gray < 50
+        thresh[black_mask] = 0
+    else:
+        _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
 
-        # Convert back to RGB
-        thresh_rgb = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
+    # Invert colors
+    if invert:
+        thresh = cv2.bitwise_not(thresh)
 
-        # Convert to PIL Image
-        processed_pil = Image.fromarray(thresh_rgb)
+    # Convert back to RGB
+    thresh_rgb = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
 
-        # Apply Screen Tone Layer 1
-        if screen_tone_1 and screen_tone_pattern_1 != "None":
-            mask1 = generate_mask(gray, screen_tone_area_pattern_1)
-            processed_pil = apply_screen_tone(
-                processed_pil,
-                size=screen_tone_size_1,
-                pattern=screen_tone_pattern_1,
-                mask=mask1,
-                gray_image=gray,
-                color=screen_tone_color_1,
-                density=screen_tone_density_1,
-                pencil_style=pencil_shading_style_1
-            )
+    # Convert to PIL Image
+    processed_pil = Image.fromarray(thresh_rgb)
 
-        # Apply Screen Tone Layer 2
-        if screen_tone_2 and screen_tone_pattern_2 != "None":
-            mask2 = generate_mask(gray, screen_tone_area_pattern_2)
-            processed_pil = apply_screen_tone(
-                processed_pil,
-                size=screen_tone_size_2,
-                pattern=screen_tone_pattern_2,
-                mask=mask2,
-                gray_image=gray,
-                color=screen_tone_color_2,
-                density=screen_tone_density_2,
-                pencil_style=pencil_shading_style_2
-            )
+    # Apply Screen Tone Layer 1
+    if screen_tone_1 and screen_tone_pattern_1 != "None":
+        mask1 = generate_mask(gray, screen_tone_area_pattern_1)
+        processed_pil = apply_screen_tone(
+            processed_pil,
+            size=screen_tone_size_1,
+            pattern=screen_tone_pattern_1,
+            mask=mask1,
+            gray_image=gray,
+            color=screen_tone_color_1,
+            density=screen_tone_density_1,
+            pencil_style=pencil_shading_style_1
+        )
 
-        return processed_pil
+    # Apply Screen Tone Layer 2
+    if screen_tone_2 and screen_tone_pattern_2 != "None":
+        mask2 = generate_mask(gray, screen_tone_area_pattern_2)
+        processed_pil = apply_screen_tone(
+            processed_pil,
+            size=screen_tone_size_2,
+            pattern=screen_tone_pattern_2,
+            mask=mask2,
+            gray_image=gray,
+            color=screen_tone_color_2,
+            density=screen_tone_density_2,
+            pencil_style=pencil_shading_style_2
+        )
+
+    return processed_pil
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
