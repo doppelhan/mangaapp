@@ -11,61 +11,25 @@ body {
     margin-bottom: 20px;
 }
 
-.parameter-row {
-    display: flex;
-    flex-wrap: wrap;
-}
-
 .parameter-group {
-    flex: 1;
-    min-width: 300px;
-    margin-right: 10px;
     border: 1px solid #ccc;
     padding: 10px;
-    box-sizing: border-box;
+    margin-bottom: 10px;
 }
 
 .parameter-group h3 {
     margin-top: 0;
 }
 
-.parameter-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.parameter-item label {
-    width: 150px;
-}
-
-.parameter-item input,
-.parameter-item select {
-    flex: 1;
-}
-
-.button-group {
-    margin-top: 10px;
-}
-
 #images {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
 }
 
 #images div {
-    flex: 1;
-    margin-right: 10px;
+    margin-right: 20px;
 }
 
-#images img {
-    width: 100%;
-    height: auto;
-    max-height: 80vh;
-    object-fit: contain;
-}
-
-#images h2 {
-    text-align: center;
+img {
+    max-width: 500px;
+    max-height: 500px;
 }
