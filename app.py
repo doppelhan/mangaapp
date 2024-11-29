@@ -1,6 +1,7 @@
 import os
+import uuid
 from flask import Flask, render_template, request, jsonify, send_file
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 import cv2
 import numpy as np
 import io
@@ -17,11 +18,12 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Variables to store images and related data
-original_image = None
-processed_image = None
-original_format = None
-original_info = None
+# Directory สำหรับเก็บไฟล์ชั่วคราว
+TEMP_DIR = os.path.join(os.getcwd(), 'temp')
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+# Global dictionary เพื่อเก็บข้อมูลภาพ
+images = {}
 
 # Lists of parameters
 threshold_methods = [
@@ -373,9 +375,7 @@ def image_to_base64(img):
     return img_str
 
 # Function to process image
-def process_image(params):
-    global processed_image, original_image
-
+def process_image(image_path, params, is_preview=True):
     # Extract parameters from params
     threshold_value = int(params.get('threshold', 128))
     contrast_value = float(params.get('contrast', 1.0))
@@ -419,18 +419,8 @@ def process_image(params):
     # Set threshold_type to THRESH_BINARY
     threshold_type = cv2.THRESH_BINARY
 
-    # Process the image
-    if original_image is None:
-        return None
-
-    img = original_image.copy()
-
-    # ลดขนาดภาพก่อนการประมวลผลเพื่อเพิ่มประสิทธิภาพ (ถ้าจำเป็น)
-    MAX_PROCESSING_SIZE = 2000  # กำหนดขนาดสูงสุดที่ต้องการให้ภาพมีด้านใดด้านหนึ่งไม่เกิน
-    if max(img.size) > MAX_PROCESSING_SIZE:
-        img.thumbnail((MAX_PROCESSING_SIZE, MAX_PROCESSING_SIZE), Image.Resampling.LANCZOS)
-
-    # Convert PIL Image to OpenCV format
+    # Load the image
+    img = Image.open(image_path).convert('RGB')
     img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
     # Adjust Contrast and Brightness
@@ -555,43 +545,31 @@ def process_image(params):
             pencil_style=pencil_shading_style_2
         )
 
-    # ไม่เพิ่มขนาดพิกเซลลงในภาพ
-
-    # Adjust image size for display to 800x600 or 600x800 based on orientation
-    def resize_for_display(img):
-        target_size_landscape = (800, 600)
-        target_size_portrait = (600, 800)
-        if img.width >= img.height:
-            img = img.resize(target_size_landscape, Image.Resampling.LANCZOS)
-        else:
-            img = img.resize(target_size_portrait, Image.Resampling.LANCZOS)
-        return img
-
-    processed_img_with_dims = resize_for_display(processed_pil)
-
-    # Convert final image to base64
-    final_img_str = image_to_base64(processed_img_with_dims)
-
-    # Store the processed image
-    processed_image = processed_img_with_dims
-
-    # Return Base64 for display
-    return final_img_str
+    return processed_pil
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    global original_image, original_format, original_info, processed_image
+    global images
 
     if request.method == 'POST':
         # Receive image file from user
         file = request.files['image']
         if file:
             try:
-                img = Image.open(file.stream)
-                original_image = img.convert('RGB')
-                original_format = img.format
-                original_info = img.info
-                # Initialize parameters with default values
+                # Generate a unique ID for the image
+                image_id = str(uuid.uuid4())
+
+                # Save original image
+                original_path = os.path.join(TEMP_DIR, f'original_{image_id}.png')
+                img = Image.open(file.stream).convert('RGB')
+                img.save(original_path)
+
+                # Create and save preview image (e.g., max dimension 800px)
+                preview_path = os.path.join(TEMP_DIR, f'preview_{image_id}.png')
+                img.thumbnail((800, 800), Image.Resampling.LANCZOS)
+                img.save(preview_path)
+
+                # Process the preview image
                 default_params = {
                     'method': 'Special Adaptive Thresholding',
                     'c_value': 6,
@@ -600,20 +578,40 @@ def index():
                     'screen_tone_size_2': 2,
                     'screen_tone_density_2': 50
                 }
-                processed_image_str = process_image(default_params)
-                # Convert original image to base64
-                original_img_str = image_to_base64(original_image)
+                processed_preview = process_image(preview_path, default_params, is_preview=True)
+                processed_preview_path = os.path.join(TEMP_DIR, f'processed_preview_{image_id}.png')
+                processed_preview.save(processed_preview_path)
+
+                # Store paths in the images dictionary
+                images[image_id] = {
+                    'original': original_path,
+                    'preview': preview_path,
+                    'processed_preview': processed_preview_path
+                }
+
+                # Convert images to base64
+                original_img = Image.open(original_path)
+                original_img_str = image_to_base64(original_img)
+
+                processed_preview_img = Image.open(processed_preview_path)
+                processed_preview_img_str = image_to_base64(processed_preview_img)
+
+                # Get sizes
+                original_size = original_img.size
+                processed_preview_size = processed_preview_img.size
+
                 return render_template('index.html',
+                                       image_id=image_id,
                                        original_image=original_img_str,
-                                       processed_image=processed_image_str,
+                                       processed_image=processed_preview_img_str,
                                        threshold_methods=threshold_methods,
                                        noise_reduction_methods=noise_reduction_methods,
                                        screen_tone_patterns=screen_tone_patterns,
                                        screen_tone_area_patterns=screen_tone_area_patterns,
                                        pencil_shading_styles=pencil_shading_styles,
                                        default_params=default_params,
-                                       original_size=original_image.size,
-                                       processed_size=processed_image.size if processed_image else (0,0))
+                                       original_size=original_size,
+                                       processed_size=processed_preview_size)
             except Exception as e:
                 logger.error(f"Error processing uploaded image: {e}")
                 return "Error processing the uploaded image.", 500
@@ -635,24 +633,126 @@ def index():
 
 @app.route('/process', methods=['POST'])
 def process_route():
-    params = request.json
-    img_str = process_image(params)
-    if img_str:
-        return jsonify({'status': 'done', 'image': img_str})
-    else:
-        return jsonify({'status': 'error'}), 500
+    global images
+    data = request.json
+    image_id = data.get('image_id')
+    if not image_id or image_id not in images:
+        return jsonify({'status': 'error', 'message': 'Invalid image ID.'}), 400
 
-@app.route('/save_image')
-def save_image():
-    global processed_image
-    if processed_image:
-        buffered = io.BytesIO()
-        processed_image.save(buffered, format='PNG')
-        buffered.seek(0)
-        return send_file(buffered, mimetype='image/png', as_attachment=True,
-                         download_name='processed_image.png')
-    else:
-        return 'No image to save.', 400
+    try:
+        # Get parameters
+        params = {
+            'threshold': data.get('threshold', 128),
+            'contrast': data.get('contrast', 1.0),
+            'brightness': data.get('brightness', 1.0),
+            'gamma': data.get('gamma', 1.0),
+            'exposure': data.get('exposure', 1.0),
+            'method': data.get('method', 'Special Adaptive Thresholding'),
+            'block_size': data.get('block_size', 11),
+            'c_value': data.get('c_value', 6),
+            'invert': data.get('invert', False),
+            'noise_reduction': data.get('noise_reduction', 'None'),
+            'sharpen': data.get('sharpen', False),
+            'edge_enhance': data.get('edge_enhance', False),
+            'hist_eq': data.get('hist_eq', False),
+            'clahe': data.get('clahe', False),
+            'clip_limit': data.get('clip_limit', 2.0),
+            'tile_grid_size': data.get('tile_grid_size', 8),
+            'local_contrast': data.get('local_contrast', False),
+            'kernel_size': data.get('kernel_size', 9),
+            'screen_tone_1': data.get('screen_tone_1', False),
+            'screen_tone_pattern_1': data.get('screen_tone_pattern_1', 'None'),
+            'screen_tone_size_1': data.get('screen_tone_size_1', 2),
+            'screen_tone_density_1': data.get('screen_tone_density_1', 50),
+            'screen_tone_area_pattern_1': data.get('screen_tone_area_pattern_1', 'Global Darkness'),
+            'pencil_shading_style_1': data.get('pencil_shading_style_1', 'Light'),
+            'screen_tone_color_1': data.get('screen_tone_color_1', '#323232'),
+            'screen_tone_2': data.get('screen_tone_2', False),
+            'screen_tone_pattern_2': data.get('screen_tone_pattern_2', 'None'),
+            'screen_tone_size_2': data.get('screen_tone_size_2', 2),
+            'screen_tone_density_2': data.get('screen_tone_density_2', 50),
+            'screen_tone_area_pattern_2': data.get('screen_tone_area_pattern_2', 'Shadow Regions'),
+            'pencil_shading_style_2': data.get('pencil_shading_style_2', 'Medium'),
+            'screen_tone_color_2': data.get('screen_tone_color_2', '#505050'),
+        }
+
+        # Process the preview image
+        preview_path = images[image_id]['preview']
+        processed_preview = process_image(preview_path, params, is_preview=True)
+        processed_preview_path = images[image_id]['processed_preview']
+        processed_preview.save(processed_preview_path)
+
+        # Convert to base64
+        processed_preview_img = Image.open(processed_preview_path)
+        processed_preview_img_str = image_to_base64(processed_preview_img)
+
+        # Get size
+        processed_preview_size = processed_preview_img.size
+
+        return jsonify({'status': 'done', 'image': processed_preview_img_str, 'size': processed_preview_size})
+    except Exception as e:
+        logger.error(f"Error processing image: {e}")
+        return jsonify({'status': 'error', 'message': 'Error processing image.'}), 500
+
+@app.route('/save', methods=['POST'])
+def save_image_route():
+    global images
+    data = request.json
+    image_id = data.get('image_id')
+    if not image_id or image_id not in images:
+        return jsonify({'status': 'error', 'message': 'Invalid image ID.'}), 400
+
+    try:
+        # Get parameters
+        params = {
+            'threshold': data.get('threshold', 128),
+            'contrast': data.get('contrast', 1.0),
+            'brightness': data.get('brightness', 1.0),
+            'gamma': data.get('gamma', 1.0),
+            'exposure': data.get('exposure', 1.0),
+            'method': data.get('method', 'Special Adaptive Thresholding'),
+            'block_size': data.get('block_size', 11),
+            'c_value': data.get('c_value', 6),
+            'invert': data.get('invert', False),
+            'noise_reduction': data.get('noise_reduction', 'None'),
+            'sharpen': data.get('sharpen', False),
+            'edge_enhance': data.get('edge_enhance', False),
+            'hist_eq': data.get('hist_eq', False),
+            'clahe': data.get('clahe', False),
+            'clip_limit': data.get('clip_limit', 2.0),
+            'tile_grid_size': data.get('tile_grid_size', 8),
+            'local_contrast': data.get('local_contrast', False),
+            'kernel_size': data.get('kernel_size', 9),
+            'screen_tone_1': data.get('screen_tone_1', False),
+            'screen_tone_pattern_1': data.get('screen_tone_pattern_1', 'None'),
+            'screen_tone_size_1': data.get('screen_tone_size_1', 2),
+            'screen_tone_density_1': data.get('screen_tone_density_1', 50),
+            'screen_tone_area_pattern_1': data.get('screen_tone_area_pattern_1', 'Global Darkness'),
+            'pencil_shading_style_1': data.get('pencil_shading_style_1', 'Light'),
+            'screen_tone_color_1': data.get('screen_tone_color_1', '#323232'),
+            'screen_tone_2': data.get('screen_tone_2', False),
+            'screen_tone_pattern_2': data.get('screen_tone_pattern_2', 'None'),
+            'screen_tone_size_2': data.get('screen_tone_size_2', 2),
+            'screen_tone_density_2': data.get('screen_tone_density_2', 50),
+            'screen_tone_area_pattern_2': data.get('screen_tone_area_pattern_2', 'Shadow Regions'),
+            'pencil_shading_style_2': data.get('pencil_shading_style_2', 'Medium'),
+            'screen_tone_color_2': data.get('screen_tone_color_2', '#505050'),
+        }
+
+        # Process the original image
+        original_path = images[image_id]['original']
+        processed_full = process_image(original_path, params, is_preview=False)
+
+        # Save processed full image
+        processed_full_path = os.path.join(TEMP_DIR, f'processed_full_{image_id}.png')
+        processed_full.save(processed_full_path)
+
+        # Send the file for download
+        return send_file(processed_full_path, mimetype='image/png',
+                         as_attachment=True, download_name='processed_image.png')
+    except Exception as e:
+        logger.error(f"Error saving image: {e}")
+        return jsonify({'status': 'error', 'message': 'Error saving image.'}), 500
 
 # เพิ่ม Error Handler เพื่อจับข้อผิดพลาดทั่วไป
 @app.errorhandler(Exception)

@@ -77,14 +77,32 @@
             margin-top: 10px;
             font-weight: bold;
         }
-        @media (max-width: 768px) {
-            .images-container {
-                flex-direction: column;
-                align-items: center;
-            }
-            .image-wrapper {
-                max-width: 90%;
-            }
+        /* Loading Bar Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            display: none; /* Hidden by default */
+        }
+        .loading-bar {
+            width: 80%;
+            height: 30px;
+            background-color: #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .loading-bar-inner {
+            height: 100%;
+            width: 0%;
+            background-color: #4caf50;
+            transition: width 0.3s;
         }
     </style>
 </head>
@@ -97,7 +115,7 @@
             <button type="submit">Upload Image</button>
         </form>
 
-        {% if original_image and processed_image %}
+        {% if image_id and original_image and processed_image %}
             <div class="parameters-row">
                 <!-- กลุ่มที่ 1: การตั้งค่าพื้นฐาน -->
                 <div class="parameter-group">
@@ -261,13 +279,28 @@
                     <div class="image-info">Output: {{ processed_size[0] }} x {{ processed_size[1] }} pixels</div>
                 </div>
             </div>
+
+            <!-- Hidden input to store image_id -->
+            <input type="hidden" id="image_id" value="{{ image_id }}">
         {% endif %}
     </div>
 
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-bar">
+            <div class="loading-bar-inner" id="loading-bar-inner"></div>
+        </div>
+    </div>
+
     <script>
+        document.getElementById('upload-form').addEventListener('submit', function(event) {
+            // Optional: Implement client-side validation or processing
+        });
+
         document.getElementById('process-button').addEventListener('click', function() {
             // Gather all parameters
             const params = {
+                image_id: document.getElementById('image_id').value,
                 threshold: parseInt(document.getElementById('threshold').value),
                 contrast: parseFloat(document.getElementById('contrast').value),
                 brightness: parseFloat(document.getElementById('brightness').value),
@@ -306,6 +339,9 @@
                 screen_tone_color_2: document.getElementById('screen_tone_color_2').value,
             };
 
+            // Show loading overlay
+            showLoading();
+
             fetch('/process', {
                 method: 'POST',
                 headers: {
@@ -315,22 +351,118 @@
             })
             .then(response => response.json())
             .then(data => {
+                hideLoading();
                 if(data.status === 'done') {
                     document.getElementById('processed-image-display').src = 'data:image/png;base64,' + data.image;
-                    // Optionally, you can update the processed image size here if needed
+                    document.querySelector('.image-info:nth-child(2)').innerText = `Output: ${data.size[0]} x ${data.size[1]} pixels`;
                 } else {
-                    alert('Error processing image.');
+                    alert(data.message || 'Error processing image.');
                 }
             })
             .catch((error) => {
+                hideLoading();
                 console.error('Error:', error);
                 alert('An error occurred while processing the image.');
             });
         });
 
         document.getElementById('save-button').addEventListener('click', function() {
-            window.location.href = '/save_image';
+            // Gather all parameters
+            const params = {
+                image_id: document.getElementById('image_id').value,
+                threshold: parseInt(document.getElementById('threshold').value),
+                contrast: parseFloat(document.getElementById('contrast').value),
+                brightness: parseFloat(document.getElementById('brightness').value),
+                gamma: parseFloat(document.getElementById('gamma').value),
+                exposure: parseFloat(document.getElementById('exposure').value),
+                method: document.getElementById('method').value,
+                block_size: parseInt(document.getElementById('block_size').value),
+                c_value: parseInt(document.getElementById('c_value').value),
+                invert: document.getElementById('invert') ? document.getElementById('invert').checked : false,
+                noise_reduction: document.getElementById('noise_reduction').value,
+                sharpen: document.getElementById('sharpen') ? document.getElementById('sharpen').checked : false,
+                edge_enhance: document.getElementById('edge_enhance') ? document.getElementById('edge_enhance').checked : false,
+                hist_eq: document.getElementById('hist_eq') ? document.getElementById('hist_eq').checked : false,
+                clahe: document.getElementById('clahe') ? document.getElementById('clahe').checked : false,
+                clip_limit: parseFloat(document.getElementById('clip_limit').value),
+                tile_grid_size: parseInt(document.getElementById('tile_grid_size').value),
+                local_contrast: document.getElementById('local_contrast') ? document.getElementById('local_contrast').checked : false,
+                kernel_size: parseInt(document.getElementById('kernel_size').value),
+
+                // Screen Tone Layer 1
+                screen_tone_1: document.getElementById('screen_tone_1').checked,
+                screen_tone_pattern_1: document.getElementById('screen_tone_pattern_1').value,
+                screen_tone_size_1: parseInt(document.getElementById('screen_tone_size_1').value),
+                screen_tone_density_1: parseInt(document.getElementById('screen_tone_density_1').value),
+                screen_tone_area_pattern_1: document.getElementById('screen_tone_area_pattern_1').value,
+                pencil_shading_style_1: document.getElementById('pencil_shading_style_1').value,
+                screen_tone_color_1: document.getElementById('screen_tone_color_1').value,
+
+                // Screen Tone Layer 2
+                screen_tone_2: document.getElementById('screen_tone_2').checked,
+                screen_tone_pattern_2: document.getElementById('screen_tone_pattern_2').value,
+                screen_tone_size_2: parseInt(document.getElementById('screen_tone_size_2').value),
+                screen_tone_density_2: parseInt(document.getElementById('screen_tone_density_2').value),
+                screen_tone_area_pattern_2: document.getElementById('screen_tone_area_pattern_2').value,
+                pencil_shading_style_2: document.getElementById('pencil_shading_style_2').value,
+                screen_tone_color_2: document.getElementById('screen_tone_color_2').value,
+            };
+
+            // Show loading overlay
+            showLoading();
+
+            fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(params),
+            })
+            .then(response => {
+                hideLoading();
+                if(response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(data => { throw data; });
+                }
+            })
+            .then(blob => {
+                // Create a link to download the image
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'processed_image.png';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch((error) => {
+                hideLoading();
+                console.error('Error:', error);
+                alert(error.message || 'An error occurred while saving the image.');
+            });
         });
+
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            const loadingBar = document.getElementById('loading-bar-inner');
+            loadingBar.style.width = '0%';
+            // Simulate loading progress
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 90) {
+                    clearInterval(interval);
+                } else {
+                    width += 10;
+                    loadingBar.style.width = width + '%';
+                }
+            }, 200);
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
     </script>
 </body>
 </html>
