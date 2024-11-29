@@ -1,467 +1,201 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
+    <meta charset="UTF-8">
     <title>Manga Studio</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f8f9fa;
-        }
-        h1 {
-            text-align: center;
+            margin: 40px;
+            background-color: #f4f4f4;
         }
         .container {
-            max-width: 1400px;
+            max-width: 900px;
             margin: auto;
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        .parameters-row {
+        .error {
+            color: red;
+            margin-bottom: 15px;
+        }
+        .success {
+            color: green;
+            margin-bottom: 15px;
+        }
+        .images {
             display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
             flex-wrap: wrap;
-            gap: 20px;
+        }
+        .images div {
+            flex: 1 1 45%;
+            margin: 10px;
+        }
+        .images img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        .form-section {
             margin-bottom: 20px;
         }
-        .parameter-group {
-            flex: 1 1 300px;
-            display: flex;
-            flex-direction: column;
-        }
-        .screen-tone-section {
-            border: 1px solid #ccc;
-            padding: 15px;
-            border-radius: 5px;
+        .parameter-section {
             margin-top: 20px;
-            flex: 1 1 100%;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
         }
-        .screen-tone-section h3 {
-            margin-top: 0;
+        .parameter-section h3 {
+            margin-bottom: 10px;
         }
-        .buttons {
-            text-align: center;
-            margin-top: 20px;
-            gap: 10px;
+        .parameter-section form {
             display: flex;
-            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
         }
-        button {
+        .parameter-section label {
+            flex: 1 1 200px;
+        }
+        .parameter-section input,
+        .parameter-section select {
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+        }
+        .submit-button {
+            margin-top: 20px;
+        }
+        .submit-button button {
             padding: 10px 20px;
             font-size: 16px;
-            cursor: pointer;
-            margin: 5px;
         }
-        .images-container {
-            display: flex;
-            gap: 40px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-        .image-wrapper {
-            position: relative;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            overflow: hidden;
-            max-width: 45%;
-        }
-        .image-wrapper img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .image-info {
-            text-align: center;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-        /* Loading Bar Styles */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            display: none; /* Hidden by default */
-        }
-        .loading-bar {
-            width: 80%;
-            height: 30px;
-            background-color: #ddd;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-        .loading-bar-inner {
-            height: 100%;
-            width: 0%;
-            background-color: #4caf50;
-            transition: width 0.3s;
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .images {
+                flex-direction: column;
+                align-items: center;
+            }
+            .images div {
+                flex: 1 1 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Manga Studio</h1>
-        <form id="upload-form" method="post" enctype="multipart/form-data">
-            <input type="file" name="image" accept="image/*" required>
-            <br><br>
-            <button type="submit">Upload Image</button>
-        </form>
 
-        {% if image_id and original_image and processed_image %}
-            <div class="parameters-row">
-                <!-- กลุ่มที่ 1: การตั้งค่าพื้นฐาน -->
-                <div class="parameter-group">
-                    <h3>การตั้งค่าพื้นฐาน</h3>
-                    <label for="method">Threshold Method:</label>
-                    <select id="method" name="method">
-                        {% for m in threshold_methods %}
-                            <option value="{{ m }}" {% if m == default_params.method %}selected{% endif %}>{{ m }}</option>
-                        {% endfor %}
-                    </select>
+        <!-- แสดงข้อความข้อผิดพลาด -->
+        {% if error %}
+            <div class="error">
+                {{ error }}
+            </div>
+        {% endif %}
 
-                    <label for="threshold">Threshold:</label>
-                    <input type="number" id="threshold" name="threshold" value="128" min="0" max="255">
+        <!-- แสดงข้อความความสำเร็จ -->
+        {% if success %}
+            <div class="success">
+                {{ success }}
+            </div>
+        {% endif %}
 
-                    <label for="brightness">Brightness:</label>
-                    <input type="number" step="0.1" id="brightness" name="brightness" value="1.0" min="0.1">
+        <!-- ฟอร์มการอัปโหลดภาพ -->
+        <div class="form-section">
+            <form method="POST" enctype="multipart/form-data">
+                <input type="file" name="image" accept="image/*" required>
+                <button type="submit">อัปโหลด</button>
+            </form>
+        </div>
 
-                    <label for="contrast">Contrast:</label>
-                    <input type="number" step="0.1" id="contrast" name="contrast" value="1.0" min="0.1">
-
-                    <label for="exposure">Exposure:</label>
-                    <input type="number" step="0.1" id="exposure" name="exposure" value="1.0" min="0.1">
-
-                    <label for="gamma">Gamma:</label>
-                    <input type="number" step="0.1" id="gamma" name="gamma" value="1.0" min="0.1">
-
-                    <label for="c_value">C Value:</label>
-                    <input type="number" id="c_value" name="c_value" value="6" min="0">
-
-                    <label for="block_size">Block Size:</label>
-                    <input type="number" id="block_size" name="block_size" value="11" min="3" step="2">
+        <!-- แสดงภาพต้นฉบับและภาพที่ประมวลผลแล้ว -->
+        {% if original_image and processed_image %}
+            <div class="images">
+                <div>
+                    <h3>ภาพต้นฉบับ</h3>
+                    <img src="data:image/png;base64,{{ original_image }}" alt="Original Image">
                 </div>
-
-                <!-- กลุ่มที่ 2: การปรับปรุงคุณภาพ -->
-                <div class="parameter-group">
-                    <h3>การปรับปรุงคุณภาพ</h3>
-                    <label for="sharpen">Sharpen:</label>
-                    <input type="checkbox" id="sharpen" name="sharpen">
-
-                    <label for="noise_reduction">Noise Reduction:</label>
-                    <select id="noise_reduction" name="noise_reduction">
-                        {% for method in noise_reduction_methods %}
-                            <option value="{{ method }}">{{ method }}</option>
-                        {% endfor %}
-                    </select>
-
-                    <label for="hist_eq">Histogram Equalization:</label>
-                    <input type="checkbox" id="hist_eq" name="hist_eq">
-
-                    <label for="clahe">CLAHE:</label>
-                    <input type="checkbox" id="clahe" name="clahe">
-
-                    <label for="clip_limit">Clip Limit:</label>
-                    <input type="number" step="0.1" id="clip_limit" name="clip_limit" value="2.0" min="0.1">
-
-                    <label for="tile_grid_size">Tile Grid Size:</label>
-                    <input type="number" id="tile_grid_size" name="tile_grid_size" value="8" min="1">
-
-                    <label for="local_contrast">Local Contrast:</label>
-                    <input type="checkbox" id="local_contrast" name="local_contrast">
-
-                    <label for="kernel_size">Kernel Size:</label>
-                    <input type="number" id="kernel_size" name="kernel_size" value="9" min="3" step="2">
+                <div>
+                    <h3>ภาพที่ประมวลผลแล้ว</h3>
+                    <img src="data:image/png;base64,{{ processed_image }}" alt="Processed Image">
                 </div>
             </div>
+        {% endif %}
 
-            <!-- ฟังก์ชั่นสกรีนโทน -->
-            <div class="parameters-row">
-                <div class="screen-tone-section">
-                    <h3>Screen Tone</h3>
-                    <div style="display: flex; gap: 20px;">
-                        <!-- Screen Tone Layer 1 -->
-                        <div>
-                            <h4>Layer 1</h4>
-                            <label for="screen_tone_1">Enable Screen Tone Layer 1:</label>
-                            <input type="checkbox" id="screen_tone_1" name="screen_tone_1">
+        <!-- ส่วนสำหรับปรับแต่งพารามิเตอร์เพิ่มเติม (ถ้ามี) -->
+        {% if image_id %}
+            <div class="parameter-section">
+                <h3>ปรับแต่งพารามิเตอร์</h3>
+                <form id="parameters-form">
+                    <label>
+                        Threshold Method:
+                        <select name="method">
+                            {% for method in threshold_methods %}
+                                <option value="{{ method }}" {% if method == default_params.method %}selected{% endif %}>{{ method }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
 
-                            <label for="screen_tone_pattern_1">Pattern:</label>
-                            <select id="screen_tone_pattern_1" name="screen_tone_pattern_1">
-                                {% for pattern in screen_tone_patterns %}
-                                    <option value="{{ pattern }}">{{ pattern }}</option>
-                                {% endfor %}
-                            </select>
+                    <label>
+                        Noise Reduction:
+                        <select name="noise_reduction">
+                            {% for noise in noise_reduction_methods %}
+                                <option value="{{ noise }}">{{ noise }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
 
-                            <label for="screen_tone_size_1">Size:</label>
-                            <input type="number" id="screen_tone_size_1" name="screen_tone_size_1" value="2" min="1">
+                    <!-- เพิ่มพารามิเตอร์อื่นๆ ตามที่ต้องการ -->
 
-                            <label for="screen_tone_density_1">Density:</label>
-                            <input type="number" id="screen_tone_density_1" name="screen_tone_density_1" value="50" min="0" max="100">
-
-                            <label for="screen_tone_area_pattern_1">Area Pattern:</label>
-                            <select id="screen_tone_area_pattern_1" name="screen_tone_area_pattern_1">
-                                {% for area_pattern in screen_tone_area_patterns %}
-                                    <option value="{{ area_pattern }}">{{ area_pattern }}</option>
-                                {% endfor %}
-                            </select>
-
-                            <label for="pencil_shading_style_1">Pencil Shading Style:</label>
-                            <select id="pencil_shading_style_1" name="pencil_shading_style_1">
-                                {% for style in pencil_shading_styles %}
-                                    <option value="{{ style }}">{{ style }}</option>
-                                {% endfor %}
-                            </select>
-
-                            <label for="screen_tone_color_1">Color:</label>
-                            <input type="color" id="screen_tone_color_1" name="screen_tone_color_1" value="#323232">
-                        </div>
-
-                        <!-- Screen Tone Layer 2 -->
-                        <div>
-                            <h4>Layer 2</h4>
-                            <label for="screen_tone_2">Enable Screen Tone Layer 2:</label>
-                            <input type="checkbox" id="screen_tone_2" name="screen_tone_2">
-
-                            <label for="screen_tone_pattern_2">Pattern:</label>
-                            <select id="screen_tone_pattern_2" name="screen_tone_pattern_2">
-                                {% for pattern in screen_tone_patterns %}
-                                    <option value="{{ pattern }}">{{ pattern }}</option>
-                                {% endfor %}
-                            </select>
-
-                            <label for="screen_tone_size_2">Size:</label>
-                            <input type="number" id="screen_tone_size_2" name="screen_tone_size_2" value="2" min="1">
-
-                            <label for="screen_tone_density_2">Density:</label>
-                            <input type="number" id="screen_tone_density_2" name="screen_tone_density_2" value="50" min="0" max="100">
-
-                            <label for="screen_tone_area_pattern_2">Area Pattern:</label>
-                            <select id="screen_tone_area_pattern_2" name="screen_tone_area_pattern_2">
-                                {% for area_pattern in screen_tone_area_patterns %}
-                                    <option value="{{ area_pattern }}">{{ area_pattern }}</option>
-                                {% endfor %}
-                            </select>
-
-                            <label for="pencil_shading_style_2">Pencil Shading Style:</label>
-                            <select id="pencil_shading_style_2" name="pencil_shading_style_2">
-                                {% for style in pencil_shading_styles %}
-                                    <option value="{{ style }}">{{ style }}</option>
-                                {% endfor %}
-                            </select>
-
-                            <label for="screen_tone_color_2">Color:</label>
-                            <input type="color" id="screen_tone_color_2" name="screen_tone_color_2" value="#505050">
-                        </div>
+                    <div class="submit-button">
+                        <button type="button" onclick="processImage()">ประมวลผล</button>
                     </div>
-                </div>
+                </form>
             </div>
-
-            <div class="buttons">
-                <button type="button" id="process-button">Process Image</button>
-                <button type="button" id="save-button">Save Image</button>
-            </div>
-
-            <div class="images-container">
-                <div class="image-wrapper">
-                    <img id="original-image-display" src="data:image/png;base64,{{ original_image }}" alt="Original Image">
-                    <div class="image-info">Original: {{ original_size[0] }} x {{ original_size[1] }} pixels</div>
-                </div>
-                <div class="image-wrapper">
-                    <img id="processed-image-display" src="data:image/png;base64,{{ processed_image }}" alt="Processed Image">
-                    <div class="image-info">Output: {{ processed_size[0] }} x {{ processed_size[1] }} pixels</div>
-                </div>
-            </div>
-
-            <!-- Hidden input to store image_id -->
-            <input type="hidden" id="image_id" value="{{ image_id }}">
         {% endif %}
     </div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loading-overlay">
-        <div class="loading-bar">
-            <div class="loading-bar-inner" id="loading-bar-inner"></div>
-        </div>
-    </div>
-
     <script>
-        document.getElementById('upload-form').addEventListener('submit', function(event) {
-            // Optional: Implement client-side validation or processing
-        });
+        function processImage() {
+            const form = document.getElementById('parameters-form');
+            const formData = new FormData(form);
+            formData.append('image_id', '{{ image_id }}');
 
-        document.getElementById('process-button').addEventListener('click', function() {
-            // Gather all parameters
-            const params = {
-                image_id: document.getElementById('image_id').value,
-                threshold: parseInt(document.getElementById('threshold').value),
-                contrast: parseFloat(document.getElementById('contrast').value),
-                brightness: parseFloat(document.getElementById('brightness').value),
-                gamma: parseFloat(document.getElementById('gamma').value),
-                exposure: parseFloat(document.getElementById('exposure').value),
-                method: document.getElementById('method').value,
-                block_size: parseInt(document.getElementById('block_size').value),
-                c_value: parseInt(document.getElementById('c_value').value),
-                invert: document.getElementById('invert') ? document.getElementById('invert').checked : false,
-                noise_reduction: document.getElementById('noise_reduction').value,
-                sharpen: document.getElementById('sharpen') ? document.getElementById('sharpen').checked : false,
-                edge_enhance: document.getElementById('edge_enhance') ? document.getElementById('edge_enhance').checked : false,
-                hist_eq: document.getElementById('hist_eq') ? document.getElementById('hist_eq').checked : false,
-                clahe: document.getElementById('clahe') ? document.getElementById('clahe').checked : false,
-                clip_limit: parseFloat(document.getElementById('clip_limit').value),
-                tile_grid_size: parseInt(document.getElementById('tile_grid_size').value),
-                local_contrast: document.getElementById('local_contrast') ? document.getElementById('local_contrast').checked : false,
-                kernel_size: parseInt(document.getElementById('kernel_size').value),
+            // แปลง FormData เป็น JSON
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
 
-                // Screen Tone Layer 1
-                screen_tone_1: document.getElementById('screen_tone_1').checked,
-                screen_tone_pattern_1: document.getElementById('screen_tone_pattern_1').value,
-                screen_tone_size_1: parseInt(document.getElementById('screen_tone_size_1').value),
-                screen_tone_density_1: parseInt(document.getElementById('screen_tone_density_1').value),
-                screen_tone_area_pattern_1: document.getElementById('screen_tone_area_pattern_1').value,
-                pencil_shading_style_1: document.getElementById('pencil_shading_style_1').value,
-                screen_tone_color_1: document.getElementById('screen_tone_color_1').value,
-
-                // Screen Tone Layer 2
-                screen_tone_2: document.getElementById('screen_tone_2').checked,
-                screen_tone_pattern_2: document.getElementById('screen_tone_pattern_2').value,
-                screen_tone_size_2: parseInt(document.getElementById('screen_tone_size_2').value),
-                screen_tone_density_2: parseInt(document.getElementById('screen_tone_density_2').value),
-                screen_tone_area_pattern_2: document.getElementById('screen_tone_area_pattern_2').value,
-                pencil_shading_style_2: document.getElementById('pencil_shading_style_2').value,
-                screen_tone_color_2: document.getElementById('screen_tone_color_2').value,
-            };
-
-            // Show loading overlay
-            showLoading();
-
+            // ส่งคำขอผ่าน AJAX
             fetch('/process', {
                 method: 'POST',
+                body: JSON.stringify(data),
                 headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(params),
+                    'Content-Type': 'application/json'
+                }
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if(data.status === 'done') {
-                    document.getElementById('processed-image-display').src = 'data:image/png;base64,' + data.image;
-                    document.querySelector('.image-info:nth-child(2)').innerText = `Output: ${data.size[0]} x ${data.size[1]} pixels`;
+                    // อัปเดตภาพที่ประมวลผลแล้วในหน้าเว็บ
+                    const processedImg = document.querySelector('img[alt="Processed Image"]');
+                    if (processedImg) {
+                        processedImg.src = 'data:image/png;base64,' + data.image;
+                    }
                 } else {
-                    alert(data.message || 'Error processing image.');
+                    // แสดงข้อความข้อผิดพลาด
+                    alert(data.message || 'เกิดข้อผิดพลาดในการประมวลผลภาพ.');
                 }
             })
-            .catch((error) => {
-                hideLoading();
+            .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while processing the image.');
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์.');
             });
-        });
-
-        document.getElementById('save-button').addEventListener('click', function() {
-            // Gather all parameters
-            const params = {
-                image_id: document.getElementById('image_id').value,
-                threshold: parseInt(document.getElementById('threshold').value),
-                contrast: parseFloat(document.getElementById('contrast').value),
-                brightness: parseFloat(document.getElementById('brightness').value),
-                gamma: parseFloat(document.getElementById('gamma').value),
-                exposure: parseFloat(document.getElementById('exposure').value),
-                method: document.getElementById('method').value,
-                block_size: parseInt(document.getElementById('block_size').value),
-                c_value: parseInt(document.getElementById('c_value').value),
-                invert: document.getElementById('invert') ? document.getElementById('invert').checked : false,
-                noise_reduction: document.getElementById('noise_reduction').value,
-                sharpen: document.getElementById('sharpen') ? document.getElementById('sharpen').checked : false,
-                edge_enhance: document.getElementById('edge_enhance') ? document.getElementById('edge_enhance').checked : false,
-                hist_eq: document.getElementById('hist_eq') ? document.getElementById('hist_eq').checked : false,
-                clahe: document.getElementById('clahe') ? document.getElementById('clahe').checked : false,
-                clip_limit: parseFloat(document.getElementById('clip_limit').value),
-                tile_grid_size: parseInt(document.getElementById('tile_grid_size').value),
-                local_contrast: document.getElementById('local_contrast') ? document.getElementById('local_contrast').checked : false,
-                kernel_size: parseInt(document.getElementById('kernel_size').value),
-
-                // Screen Tone Layer 1
-                screen_tone_1: document.getElementById('screen_tone_1').checked,
-                screen_tone_pattern_1: document.getElementById('screen_tone_pattern_1').value,
-                screen_tone_size_1: parseInt(document.getElementById('screen_tone_size_1').value),
-                screen_tone_density_1: parseInt(document.getElementById('screen_tone_density_1').value),
-                screen_tone_area_pattern_1: document.getElementById('screen_tone_area_pattern_1').value,
-                pencil_shading_style_1: document.getElementById('pencil_shading_style_1').value,
-                screen_tone_color_1: document.getElementById('screen_tone_color_1').value,
-
-                // Screen Tone Layer 2
-                screen_tone_2: document.getElementById('screen_tone_2').checked,
-                screen_tone_pattern_2: document.getElementById('screen_tone_pattern_2').value,
-                screen_tone_size_2: parseInt(document.getElementById('screen_tone_size_2').value),
-                screen_tone_density_2: parseInt(document.getElementById('screen_tone_density_2').value),
-                screen_tone_area_pattern_2: document.getElementById('screen_tone_area_pattern_2').value,
-                pencil_shading_style_2: document.getElementById('pencil_shading_style_2').value,
-                screen_tone_color_2: document.getElementById('screen_tone_color_2').value,
-            };
-
-            // Show loading overlay
-            showLoading();
-
-            fetch('/save', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(params),
-            })
-            .then(response => {
-                hideLoading();
-                if(response.ok) {
-                    return response.blob();
-                } else {
-                    return response.json().then(data => { throw data; });
-                }
-            })
-            .then(blob => {
-                // Create a link to download the image
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'processed_image.png';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-            })
-            .catch((error) => {
-                hideLoading();
-                console.error('Error:', error);
-                alert(error.message || 'An error occurred while saving the image.');
-            });
-        });
-
-        function showLoading() {
-            document.getElementById('loading-overlay').style.display = 'flex';
-            const loadingBar = document.getElementById('loading-bar-inner');
-            loadingBar.style.width = '0%';
-            // Simulate loading progress
-            let width = 0;
-            const interval = setInterval(() => {
-                if (width >= 90) {
-                    clearInterval(interval);
-                } else {
-                    width += 10;
-                    loadingBar.style.width = width + '%';
-                }
-            }, 200);
-        }
-
-        function hideLoading() {
-            document.getElementById('loading-overlay').style.display = 'none';
         }
     </script>
 </body>
