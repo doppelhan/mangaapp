@@ -1,6 +1,6 @@
 import os
 from flask import Flask, render_template, request, jsonify, send_file
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ExifTags
 import cv2
 import numpy as np
 import io
@@ -78,6 +78,28 @@ pencil_shading_styles = [
     "Cross-hatched",
     "Manga Style"
 ]
+def correct_image_orientation(image):
+    try:
+        # ดึงข้อมูล EXIF จากภาพ
+        exif = image._getexif()
+        if exif is not None:
+            for orientation in ExifTags.TAGS.keys():
+                if ExifTags.TAGS[orientation] == 'Orientation':
+                    break
+            exif_orientation = exif.get(orientation, None)
+
+            # ปรับทิศทางตามค่า EXIF Orientation
+            if exif_orientation == 3:
+                image = image.rotate(180, expand=True)
+            elif exif_orientation == 6:
+                image = image.rotate(270, expand=True)
+            elif exif_orientation == 8:
+                image = image.rotate(90, expand=True)
+    except (AttributeError, KeyError, IndexError):
+        # ไม่มีข้อมูล EXIF หรือข้อมูลไม่ถูกต้อง
+        pass
+    return image
+
 
 # ฟังก์ชันสำหรับปรับค่าแกมมา
 def adjust_gamma(image, gamma=1.0):
@@ -547,6 +569,28 @@ def image_to_base64(img):
     img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
     return img_str
+
+def correct_image_orientation(image):
+    try:
+        # ดึงข้อมูล EXIF จากภาพ
+        exif = image._getexif()
+        if exif is not None:
+            for orientation in ExifTags.TAGS.keys():
+                if ExifTags.TAGS[orientation] == 'Orientation':
+                    break
+            exif_orientation = exif.get(orientation, None)
+
+            # ปรับทิศทางตามค่า EXIF Orientation
+            if exif_orientation == 3:
+                image = image.rotate(180, expand=True)
+            elif exif_orientation == 6:
+                image = image.rotate(270, expand=True)
+            elif exif_orientation == 8:
+                image = image.rotate(90, expand=True)
+    except (AttributeError, KeyError, IndexError):
+        # ไม่มีข้อมูล EXIF หรือข้อมูลไม่ถูกต้อง
+        pass
+    return image
 
 # ฟังก์ชันสำหรับประมวลผลภาพ
 def process_image(params):
