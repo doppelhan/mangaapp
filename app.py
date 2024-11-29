@@ -558,9 +558,9 @@ def process_image(params):
     brightness_value = float(params.get('brightness', 1.0))
     gamma_value = float(params.get('gamma', 1.0))
     exposure_value = float(params.get('exposure', 1.0))
-    method = params.get('method', 'Global Thresholding')
+    method = params.get('method', 'Special Adaptive Thresholding')
     block_size = int(params.get('block_size', 11))
-    c_value = int(params.get('c_value', 2))
+    c_value = int(params.get('c_value', 6))
     invert = params.get('invert', 'false') == 'true'
     noise_reduction_method = params.get('noise_reduction', 'None')
     sharpen = params.get('sharpen', 'false') == 'true'
@@ -575,7 +575,7 @@ def process_image(params):
     # Screen Tone Layer 1
     screen_tone_1 = params.get('screen_tone_1', 'false') == 'true'
     screen_tone_pattern_1 = params.get('screen_tone_pattern_1', 'None')
-    screen_tone_size_1 = int(params.get('screen_tone_size_1', 5))
+    screen_tone_size_1 = int(params.get('screen_tone_size_1', 2))
     screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))
     screen_tone_area_pattern_1 = params.get('screen_tone_area_pattern_1', 'Global Darkness')
     pencil_shading_style_1 = params.get('pencil_shading_style_1', 'Light')
@@ -585,8 +585,8 @@ def process_image(params):
     # Screen Tone Layer 2
     screen_tone_2 = params.get('screen_tone_2', 'false') == 'true'
     screen_tone_pattern_2 = params.get('screen_tone_pattern_2', 'None')
-    screen_tone_size_2 = int(params.get('screen_tone_size_2', 7))
-    screen_tone_density_2 = int(params.get('screen_tone_density_2', 70))
+    screen_tone_size_2 = int(params.get('screen_tone_size_2', 2))
+    screen_tone_density_2 = int(params.get('screen_tone_density_2', 50))
     screen_tone_area_pattern_2 = params.get('screen_tone_area_pattern_2', 'Shadow Regions')
     pencil_shading_style_2 = params.get('pencil_shading_style_2', 'Medium')
     screen_tone_color_2 = params.get('screen_tone_color_2', '#505050')
