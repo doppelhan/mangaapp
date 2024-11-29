@@ -306,7 +306,7 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
                         draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=dot_color)
 
     elif pattern == "Scratch Lines":
-        num_lines = int((width + height) * density / 1000)
+        num_lines = int((width + height) * density / 500)
         for _ in range(num_lines):
             x_start = np.random.randint(0, width)
             y_start = np.random.randint(0, height)
