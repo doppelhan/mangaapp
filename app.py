@@ -1,4 +1,4 @@
-import os
+ฃimport os
 import uuid
 from flask import Flask, render_template, request, jsonify, send_file
 from PIL import Image, ImageDraw
@@ -7,7 +7,7 @@ import numpy as np
 import io
 import base64
 import logging
-from werkzeug.exceptions import HTTPException
+from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 
 app = Flask(__name__)
 
@@ -379,10 +379,6 @@ def image_to_base64(img):
 
 # Function to process image
 def process_image(image_path, params, is_preview=True):
-    # ไม่มีการใช้ try-except ภายในฟังก์ชันนี้ เพื่อป้องกันการขาดหายของบล็อก
-    # แต่คุณสามารถเพิ่ม try-except ได้ตามต้องการ
-    # หรือคุณสามารถทำให้แน่ใจว่าโค้ดนี้ไม่มีข้อผิดพลาด
-
     # Extract parameters from params
     threshold_value = int(params.get('threshold', 128))
     contrast_value = float(params.get('contrast', 1.0))
@@ -570,7 +566,7 @@ def index():
                 img = Image.open(file.stream).convert('RGB')
             except Exception as e:
                 logger.error(f"Invalid image file: {e}")
-                return "ไฟล์ที่อัปโหลดไม่ถูกต้อง. กรุณาอัปโหลดไฟล์รูปภาพที่ถูกต้อง.", 400
+                return render_template('index.html', error="ไฟล์ที่อัปโหลดไม่ถูกต้อง. กรุณาอัปโหลดไฟล์รูปภาพที่ถูกต้อง."), 400
 
             try:
                 # Generate a unique ID for the image
@@ -631,9 +627,9 @@ def index():
                                        processed_size=processed_preview_size)
             except Exception as e:
                 logger.error(f"Error processing uploaded image: {e}")
-                return "เกิดข้อผิดพลาดในการประมวลผลภาพที่อัปโหลด.", 500
+                return render_template('index.html', error="เกิดข้อผิดพลาดในการประมวลผลภาพที่อัปโหลด."), 500
         else:
-            return "กรุณาอัปโหลดไฟล์รูปภาพ.", 400
+            return render_template('index.html', error="กรุณาอัปโหลดไฟล์รูปภาพ."), 400
     else:
         return render_template('index.html',
                                threshold_methods=threshold_methods,
@@ -773,20 +769,21 @@ def save_image_route():
         logger.error(f"Error saving image: {e}")
         return jsonify({'status': 'error', 'message': 'Error saving image.'}), 500
 
-# เพิ่ม Error Handler เพื่อจับข้อผิดพลาดทั่วไป
+# Error handler for RequestEntityTooLarge (413)
+@app.errorhandler(RequestEntityTooLarge)
+def handle_request_entity_too_large(error):
+    logger.error(f"File too large: {error}")
+    return render_template('index.html', error="ไฟล์ที่คุณอัปโหลดมีขนาดใหญ่เกินไป. โปรดลองอัปโหลดไฟล์ที่มีขนาดไม่เกิน 100MB."), 413
+
+# Error handler for general exceptions
 @app.errorhandler(Exception)
 def handle_exception(e):
     if isinstance(e, HTTPException):
         return jsonify(error=e.description), e.code
     else:
-        # Log ข้อผิดพลาดลงใน Logs
+        # Log the error
         logger.error(f"Unhandled Exception: {e}")
         return jsonify(error="Internal Server Error"), 500
-
-# เพิ่ม Error Handler สำหรับ 413 Request Entity Too Large
-@app.errorhandler(413)
-def request_entity_too_large(error):
-    return "ไฟล์ที่คุณอัปโหลดมีขนาดใหญ่เกินไป. โปรดลองอัปโหลดไฟล์ที่มีขนาดไม่เกิน 100MB.", 413
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
