@@ -140,14 +140,14 @@
                         <label for="screen_tone_pattern_1">Pattern:</label>
                         <select id="screen_tone_pattern_1" name="screen_tone_pattern_1">
                             {% for pattern in screen_tone_patterns %}
-                            <option value="{{ pattern }}">{{ pattern }}</option>
+                            <option value="{{ pattern }}" {% if pattern == 'Checkerboard' %}selected{% endif %}>{{ pattern }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <!-- Size -->
                     <div class="parameter-item">
                         <label for="screen_tone_size_1">Size:</label>
-                        <input type="number" id="screen_tone_size_1" name="screen_tone_size_1" min="1" max="50" value="50"> <!-- ตั้งค่าเริ่มต้นเป็น 50 และปรับ max -->
+                        <input type="number" id="screen_tone_size_1" name="screen_tone_size_1" min="1" max="50" value="3"> <!-- ตั้งค่าเริ่มต้นเป็น 3 และปรับ max -->
                     </div>
                     <!-- Density -->
                     <div class="parameter-item">
@@ -192,14 +192,14 @@
                         <label for="screen_tone_pattern_2">Pattern:</label>
                         <select id="screen_tone_pattern_2" name="screen_tone_pattern_2">
                             {% for pattern in screen_tone_patterns %}
-                            <option value="{{ pattern }}">{{ pattern }}</option>
+                            <option value="{{ pattern }}" {% if pattern == 'Checkerboard' %}selected{% endif %}>{{ pattern }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <!-- Size -->
                     <div class="parameter-item">
                         <label for="screen_tone_size_2">Size:</label>
-                        <input type="number" id="screen_tone_size_2" name="screen_tone_size_2" min="1" max="50" value="50"> <!-- ตั้งค่าเริ่มต้นเป็น 50 และปรับ max -->
+                        <input type="number" id="screen_tone_size_2" name="screen_tone_size_2" min="1" max="50" value="3"> <!-- ตั้งค่าเริ่มต้นเป็น 3 และปรับ max -->
                     </div>
                     <!-- Density -->
                     <div class="parameter-item">
