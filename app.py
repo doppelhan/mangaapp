@@ -1,6 +1,6 @@
 import os
 from flask import Flask, render_template, request, jsonify, send_file
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps  # เพิ่ม ImageOps
 import cv2
 import numpy as np
 import io
@@ -88,6 +88,8 @@ def adjust_gamma(image, gamma=1.0):
 
 # ฟังก์ชันสำหรับสร้างมาสก์
 def generate_mask(gray_image, pattern):
+    # รหัสเดิมสำหรับการสร้างมาสก์ตาม pattern
+    # (ไม่เปลี่ยนแปลง)
     if pattern == "Global Darkness":
         mask = gray_image < 100
 
@@ -620,13 +622,15 @@ def process_image(params):
 
     # Adaptive Histogram Equalization (CLAHE)
     if clahe:
-        clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
-        gray = clahe.apply(gray)
+        clahe_obj = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
+        gray = clahe_obj.apply(gray)
 
     # Local Contrast Enhancement
     if local_contrast:
         if kernel_size % 2 == 0:
             kernel_size += 1
+        if kernel_size <= 1:
+            kernel_size = 3
         gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
         gray = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0)
 
@@ -719,7 +723,7 @@ def process_image(params):
             gray_image=gray,
             color=screen_tone_color_2,
             density=screen_tone_density_2,
-            pencil_style=pencil_shading_style_2
+            pencil_shading_style=pencil_shading_style_2
         )
 
     # เก็บภาพที่ประมวลผล
@@ -738,6 +742,7 @@ def index():
         if file:
             try:
                 img = Image.open(file.stream)
+                img = ImageOps.exif_transpose(img)  # เพิ่มบรรทัดนี้เพื่อปรับการหมุนตาม EXIF
                 original_image = img.convert('RGB')
                 original_format = img.format
                 original_info = img.info
@@ -780,4 +785,3 @@ def save_image():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-
