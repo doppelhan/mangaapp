@@ -1,12 +1,16 @@
 import os
 from flask import Flask, render_template, request, jsonify, send_file
-from PIL import Image, ImageDraw, ImageOps  # เพิ่ม ImageOps
+from PIL import Image, ImageDraw, ImageOps
 import cv2
 import numpy as np
 import io
 import base64
+import logging
 
 app = Flask(__name__)
+
+# ตั้งค่า logging
+logging.basicConfig(level=logging.INFO)
 
 # ตัวแปรสำหรับเก็บภาพและข้อมูลที่เกี่ยวข้อง
 original_image = None
@@ -79,17 +83,13 @@ pencil_shading_styles = [
     "Manga Style"
 ]
 
-# ฟังก์ชันสำหรับปรับค่าแกมมา
 def adjust_gamma(image, gamma=1.0):
     invGamma = 1.0 / gamma
     table = (np.arange(256) / 255.0) ** invGamma * 255
     table = np.clip(table, 0, 255).astype("uint8")
     return cv2.LUT(image, table)
 
-# ฟังก์ชันสำหรับสร้างมาสก์
 def generate_mask(gray_image, pattern):
-    # รหัสเดิมสำหรับการสร้างมาสก์ตาม pattern
-    # (ไม่เปลี่ยนแปลง)
     if pattern == "Global Darkness":
         mask = gray_image < 100
 
@@ -197,7 +197,6 @@ def generate_mask(gray_image, pattern):
 
     return mask
 
-# ฟังก์ชันสำหรับเพิ่มสกรีนโทน
 def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None, color=(50, 50, 50), density=50, pencil_style="Light"):
     if pattern == "None" or mask is None:
         return image  # ไม่ทำการเพิ่มสกรีนโทน
@@ -219,121 +218,7 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
         brightness_array = np.ones((height, width))
 
     # เลือกแพทเทิร์น
-    if pattern == "Dots":
-        max_radius = size
-        min_radius = 1
-        step = size * 2
-
-        for y in range(0, height, step):
-            for x in range(0, width, step):
-                if mask_array[y, x]:
-                    brightness = brightness_array[y, x]
-                    radius = min_radius + brightness * (max_radius - min_radius)
-                    radius = int(radius)
-                    if radius > 0:
-                        dot_color = color + (int(255 * brightness),)
-                        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=dot_color)
-
-    elif pattern == "Hatching":
-        min_spacing = max(2, 15 - size)
-        max_spacing = max(5, 25 - size)
-        spacing = int(max_spacing - (density / 100) * (max_spacing - min_spacing))
-        spacing = max(spacing, 2)
-
-        for y in range(0, height, spacing):
-            for x in range(0, width, spacing):
-                if mask_array[y, x]:
-                    brightness = brightness_array[y, x]
-                    line_color = color + (int(255 * brightness),)
-                    length = int(size + brightness * size)
-                    draw.line((x, y, x + length, y), fill=line_color, width=1)
-                    draw.line((x, y, x + length, y + length), fill=line_color, width=1)
-
-    elif pattern == "Cross-Hatching":
-        min_spacing = max(2, 15 - size)
-        max_spacing = max(5, 25 - size)
-        spacing = int(max_spacing - (density / 100) * (max_spacing - min_spacing))
-        spacing = max(spacing, 2)
-
-        for y in range(0, height, spacing):
-            for x in range(0, width, spacing):
-                if mask_array[y, x]:
-                    brightness = brightness_array[y, x]
-                    line_color = color + (int(255 * brightness),)
-                    length = int(size + brightness * size)
-                    draw.line((x, y, x + length, y + length), fill=line_color, width=1)
-                    draw.line((x + length, y, x, y + length), fill=line_color, width=1)
-
-    elif pattern == "Lines":
-        min_spacing = max(2, 15 - size)
-        max_spacing = max(5, 25 - size)
-        spacing = int(max_spacing - (density / 100) * (max_spacing - min_spacing))
-        spacing = max(spacing, 2)
-
-        for y in range(0, height, spacing):
-            if mask_array[y, :].any():
-                brightness = brightness_array[y, :].mean()
-                line_color = color + (int(255 * brightness),)
-                draw.line((0, y, width, y), fill=line_color, width=1)
-
-    elif pattern == "Vertical Lines":
-        min_spacing = max(2, 15 - size)
-        max_spacing = max(5, 25 - size)
-        spacing = int(max_spacing - (density / 100) * (max_spacing - min_spacing))
-        spacing = max(spacing, 2)
-
-        for x in range(0, width, spacing):
-            if mask_array[:, x].any():
-                brightness = brightness_array[:, x].mean()
-                line_color = color + (int(255 * brightness),)
-                draw.line((x, 0, x, height), fill=line_color, width=1)
-
-    elif pattern == "Horizontal Lines":
-        min_spacing = max(2, 15 - size)
-        max_spacing = max(5, 25 - size)
-        spacing = int(max_spacing - (density / 100) * (max_spacing - min_spacing))
-        spacing = max(spacing, 2)
-
-        for y in range(0, height, spacing):
-            if mask_array[y, :].any():
-                brightness = brightness_array[y, :].mean()
-                line_color = color + (int(255 * brightness),)
-                draw.line((0, y, width, y), fill=line_color, width=1)
-
-    elif pattern == "Checkerboard":
-        step = size * 2
-        for y in range(0, height, step):
-            for x in range(0, width, step):
-                if mask_array[y:y+step, x:x+step].any():
-                    brightness = brightness_array[y:y+step, x:x+step].mean()
-                    fill_color = color + (int(255 * brightness),)
-                    if (x // step + y // step) % 2 == 0:
-                        box = (x, y, x + size, y + size)
-                        draw.rectangle(box, fill=fill_color)
-                    else:
-                        box = (x + size, y, x + step, y + size)
-                        draw.rectangle(box, fill=fill_color)
-
-    elif pattern == "Diagonal Stripes":
-        spacing = size * 2
-        for i in range(-height, width, spacing):
-            brightness = brightness_array.mean()
-            line_color = color + (int(255 * brightness),)
-            draw.line([(i, 0), (i + height, height)], fill=line_color, width=1)
-
-    elif pattern == "Spiral":
-        center_x, center_y = width // 2, height // 2
-        max_radius = min(center_x, center_y)
-        for angle in np.linspace(0, 4 * np.pi, int(max_radius / size) * 10):
-            radius = size * angle / (2 * np.pi)
-            x = int(center_x + radius * np.cos(angle))
-            y = int(center_y + radius * np.sin(angle))
-            if 0 <= x < width and 0 <= y < height and mask_array[y, x]:
-                brightness = brightness_array[y, x]
-                point_color = color + (int(255 * brightness),)
-                draw.point((x, y), fill=point_color)
-
-    elif pattern == "Pencil Shading":
+    if pattern == "Pencil Shading":
         if pencil_style == "Light":
             # Light pencil shading implementation
             line_spacing = size * 2
@@ -543,194 +428,191 @@ def apply_screen_tone(image, size=5, pattern="None", mask=None, gray_image=None,
 
     return image
 
-# ฟังก์ชันสำหรับแปลงภาพเป็น Base64
 def image_to_base64(img):
     buffered = io.BytesIO()
     img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
     return img_str
 
-# ฟังก์ชันสำหรับประมวลผลภาพ
 def process_image(params):
     global processed_image, original_image, screen_tone_color, screen_tone_color2
 
-    # ดึงค่าพารามิเตอร์จาก params
-    threshold_value = int(params.get('threshold', 128))
-    contrast_value = float(params.get('contrast', 1.0))
-    brightness_value = float(params.get('brightness', 1.0))
-    gamma_value = float(params.get('gamma', 1.0))
-    exposure_value = float(params.get('exposure', 1.0))
-    method = params.get('method', 'Global Thresholding')
-    block_size = int(params.get('block_size', 11))
-    c_value = int(params.get('c_value', 2))
-    invert = params.get('invert', 'false') == 'true'
-    noise_reduction_method = params.get('noise_reduction', 'None')
-    sharpen = params.get('sharpen', 'false') == 'true'
-    edge_enhance = params.get('edge_enhance', 'false') == 'true'
-    hist_eq = params.get('hist_eq', 'false') == 'true'
-    clahe = params.get('clahe', 'false') == 'true'
-    clip_limit = float(params.get('clip_limit', 2.0))
-    tile_grid_size = int(params.get('tile_grid_size', 8))
-    local_contrast = params.get('local_contrast', 'false') == 'true'
-    kernel_size = int(params.get('kernel_size', 9))
+    try:
+        if original_image is None:
+            logging.error("No original image found.")
+            return None
 
-    # Screen Tone Layer 1
-    screen_tone_1 = params.get('screen_tone_1', 'false') == 'true'
-    screen_tone_pattern_1 = params.get('screen_tone_pattern_1', 'None')
-    screen_tone_size_1 = int(params.get('screen_tone_size_1', 5))
-    screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))
-    screen_tone_area_pattern_1 = params.get('screen_tone_area_pattern_1', 'Global Darkness')
-    pencil_shading_style_1 = params.get('pencil_shading_style_1', 'Light')
-    screen_tone_color_1 = params.get('screen_tone_color_1', '#323232')
-    screen_tone_color_1 = tuple(int(screen_tone_color_1.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        img = original_image.copy()
 
-    # Screen Tone Layer 2
-    screen_tone_2 = params.get('screen_tone_2', 'false') == 'true'
-    screen_tone_pattern_2 = params.get('screen_tone_pattern_2', 'None')
-    screen_tone_size_2 = int(params.get('screen_tone_size_2', 7))
-    screen_tone_density_2 = int(params.get('screen_tone_density_2', 70))
-    screen_tone_area_pattern_2 = params.get('screen_tone_area_pattern_2', 'Shadow Regions')
-    pencil_shading_style_2 = params.get('pencil_shading_style_2', 'Medium')
-    screen_tone_color_2 = params.get('screen_tone_color_2', '#505050')
-    screen_tone_color_2 = tuple(int(screen_tone_color_2.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        # ปรับค่า Contrast และ Brightness
+        img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        contrast_value = float(params.get('contrast', 1.0))
+        brightness_value = float(params.get('brightness', 1.0))
+        img_cv = cv2.convertScaleAbs(img_cv, alpha=contrast_value, beta=(brightness_value - 1) * 255)
 
-    # กำหนดค่า threshold_type เป็น THRESH_BINARY
-    threshold_type = cv2.THRESH_BINARY
+        # ปรับค่า Gamma Correction
+        gamma_value = float(params.get('gamma', 1.0))
+        img_cv = adjust_gamma(img_cv, gamma=gamma_value)
 
-    # ทำการประมวลผลภาพ
-    if original_image is None:
-        return None
+        # แปลงภาพเป็นสีเทา
+        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
 
-    img = original_image.copy()
+        # Exposure Compensation
+        exposure_value = float(params.get('exposure', 1.0))
+        gray = cv2.convertScaleAbs(gray, alpha=exposure_value, beta=0)
 
-    # ปรับค่า Contrast และ Brightness
-    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-    img_cv = cv2.convertScaleAbs(img_cv, alpha=contrast_value, beta=(brightness_value - 1) * 255)
+        # Histogram Equalization
+        hist_eq = params.get('hist_eq', False)
+        if hist_eq:
+            gray = cv2.equalizeHist(gray)
 
-    # ปรับค่า Gamma Correction
-    img_cv = adjust_gamma(img_cv, gamma=gamma_value)
+        # Adaptive Histogram Equalization (CLAHE)
+        clahe = params.get('clahe', False)
+        if clahe:
+            clip_limit = float(params.get('clip_limit', 2.0))
+            tile_grid_size = int(params.get('tile_grid_size', 8))
+            clahe_obj = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
+            gray = clahe_obj.apply(gray)
 
-    # แปลงภาพเป็นสีเทา
-    gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+        # Local Contrast Enhancement
+        local_contrast = params.get('local_contrast', False)
+        if local_contrast:
+            kernel_size = int(params.get('kernel_size', 9))
+            if kernel_size % 2 == 0:
+                kernel_size += 1
+            if kernel_size <= 1:
+                kernel_size = 3
+            gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
+            gray = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0)
 
-    # Exposure Compensation
-    gray = cv2.convertScaleAbs(gray, alpha=exposure_value, beta=0)
+        # การลดสัญญาณรบกวน
+        noise_reduction_method = params.get('noise_reduction', 'None')
+        if noise_reduction_method == "Median Filter":
+            denoised = cv2.medianBlur(gray, 3)
+        elif noise_reduction_method == "Bilateral Filter":
+            denoised = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+        elif noise_reduction_method == "Gaussian Blur":
+            denoised = cv2.GaussianBlur(gray, (5, 5), 0)
+        elif noise_reduction_method == "Non-local Means Denoising":
+            denoised = cv2.fastNlMeansDenoising(gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
+        else:
+            denoised = gray
 
-    # Histogram Equalization
-    if hist_eq:
-        gray = cv2.equalizeHist(gray)
+        # เพิ่มความคมชัด
+        sharpen = params.get('sharpen', False)
+        if sharpen:
+            gaussian = cv2.GaussianBlur(denoised, (0, 0), sigmaX=3)
+            denoised = cv2.addWeighted(denoised, 1.5, gaussian, -0.5, 0)
 
-    # Adaptive Histogram Equalization (CLAHE)
-    if clahe:
-        clahe_obj = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
-        gray = clahe_obj.apply(gray)
+        # เพิ่มความชัดของขอบ
+        edge_enhance = params.get('edge_enhance', False)
+        if edge_enhance:
+            edges = cv2.Canny(denoised, threshold1=50, threshold2=150)
+            denoised = cv2.bitwise_or(denoised, edges)
 
-    # Local Contrast Enhancement
-    if local_contrast:
-        if kernel_size % 2 == 0:
-            kernel_size += 1
-        if kernel_size <= 1:
-            kernel_size = 3
-        gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
-        gray = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0)
+        # Thresholding
+        method = params.get('method', 'Global Thresholding')
+        threshold_value = int(params.get('threshold', 128))
+        block_size = int(params.get('block_size', 11))
+        c_value = int(params.get('c_value', 2))
+        threshold_type = cv2.THRESH_BINARY
 
-    # การลดสัญญาณรบกวน
-    if noise_reduction_method == "Median Filter":
-        denoised = cv2.medianBlur(gray, 3)
-    elif noise_reduction_method == "Bilateral Filter":
-        denoised = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
-    elif noise_reduction_method == "Gaussian Blur":
-        denoised = cv2.GaussianBlur(gray, (5, 5), 0)
-    elif noise_reduction_method == "Non-local Means Denoising":
-        denoised = cv2.fastNlMeansDenoising(gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
-    else:
-        denoised = gray
+        if method == "Global Thresholding":
+            _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
+        elif method == "Adaptive Mean Thresholding":
+            if block_size % 2 == 0:
+                block_size += 1
+            if block_size <= 1:
+                block_size = 3
+            thresh = cv2.adaptiveThreshold(
+                denoised, 255, cv2.ADAPTIVE_THRESH_MEAN_C, threshold_type, block_size, c_value
+            )
+        elif method == "Adaptive Gaussian Thresholding":
+            if block_size % 2 == 0:
+                block_size += 1
+            if block_size <= 1:
+                block_size = 3
+            thresh = cv2.adaptiveThreshold(
+                denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, threshold_type, block_size, c_value
+            )
+        elif method == "Special Adaptive Thresholding":
+            if block_size % 2 == 0:
+                block_size += 1
+            if block_size <= 1:
+                block_size = 3
+            thresh = cv2.adaptiveThreshold(
+                denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, c_value
+            )
+            black_mask = gray < 50
+            thresh[black_mask] = 0
+        else:
+            _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
 
-    # เพิ่มความคมชัด
-    if sharpen:
-        gaussian = cv2.GaussianBlur(denoised, (0, 0), sigmaX=3)
-        denoised = cv2.addWeighted(denoised, 1.5, gaussian, -0.5, 0)
+        # Invert สี
+        invert = params.get('invert', False)
+        if invert:
+            thresh = cv2.bitwise_not(thresh)
 
-    # เพิ่มความชัดของขอบ
-    if edge_enhance:
-        edges = cv2.Canny(denoised, threshold1=50, threshold2=150)
-        denoised = cv2.bitwise_or(denoised, edges)
+        # แปลงภาพกลับเป็น RGB
+        thresh_rgb = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
 
-    # Thresholding
-    if method == "Global Thresholding":
-        _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
-    elif method == "Adaptive Mean Thresholding":
-        if block_size % 2 == 0:
-            block_size += 1
-        if block_size <= 1:
-            block_size = 3
-        thresh = cv2.adaptiveThreshold(
-            denoised, 255, cv2.ADAPTIVE_THRESH_MEAN_C, threshold_type, block_size, c_value
-        )
-    elif method == "Adaptive Gaussian Thresholding":
-        if block_size % 2 == 0:
-            block_size += 1
-        if block_size <= 1:
-            block_size = 3
-        thresh = cv2.adaptiveThreshold(
-            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, threshold_type, block_size, c_value
-        )
-    elif method == "Special Adaptive Thresholding":
-        if block_size % 2 == 0:
-            block_size += 1
-        if block_size <= 1:
-            block_size = 3
-        thresh = cv2.adaptiveThreshold(
-            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, c_value
-        )
-        black_mask = gray < 50
-        thresh[black_mask] = 0
-    else:
-        _, thresh = cv2.threshold(denoised, threshold_value, 255, threshold_type)
+        # แปลงเป็น PIL Image
+        processed_pil = Image.fromarray(thresh_rgb)
 
-    # Invert สี
-    if invert:
-        thresh = cv2.bitwise_not(thresh)
+        # สร้างมาสก์สำหรับ Screen Tone Layer 1
+        screen_tone_1 = params.get('screen_tone_1', False)
+        screen_tone_pattern_1 = params.get('screen_tone_pattern_1', 'None')
+        screen_tone_size_1 = int(params.get('screen_tone_size_1', 5))
+        screen_tone_density_1 = int(params.get('screen_tone_density_1', 50))
+        screen_tone_area_pattern_1 = params.get('screen_tone_area_pattern_1', 'Global Darkness')
+        pencil_shading_style_1 = params.get('pencil_shading_style_1', 'Light')
+        screen_tone_color_1 = params.get('screen_tone_color_1', '#323232')
+        screen_tone_color_1 = tuple(int(screen_tone_color_1.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
-    # แปลงภาพกลับเป็น RGB
-    thresh_rgb = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
+        # สร้างมาสก์สำหรับ Screen Tone Layer 2
+        screen_tone_2 = params.get('screen_tone_2', False)
+        screen_tone_pattern_2 = params.get('screen_tone_pattern_2', 'None')
+        screen_tone_size_2 = int(params.get('screen_tone_size_2', 7))
+        screen_tone_density_2 = int(params.get('screen_tone_density_2', 70))
+        screen_tone_area_pattern_2 = params.get('screen_tone_area_pattern_2', 'Shadow Regions')
+        pencil_shading_style_2 = params.get('pencil_shading_style_2', 'Medium')
+        screen_tone_color_2 = params.get('screen_tone_color_2', '#505050')
+        screen_tone_color_2 = tuple(int(screen_tone_color_2.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
-    # แปลงเป็น PIL Image
-    processed_pil = Image.fromarray(thresh_rgb)
+        # สกรีนโทน Layer 1
+        if screen_tone_1 and screen_tone_pattern_1 != "None":
+            mask1 = generate_mask(gray, screen_tone_area_pattern_1)
+            processed_pil = apply_screen_tone(
+                processed_pil,
+                size=screen_tone_size_1,
+                pattern=screen_tone_pattern_1,
+                mask=mask1,
+                gray_image=gray,
+                color=screen_tone_color_1,
+                density=screen_tone_density_1,
+                pencil_style=pencil_shading_style_1
+            )
 
-    # สร้างมาสก์สำหรับ Screen Tone Layer 1
-    if screen_tone_1 and screen_tone_pattern_1 != "None":
-        mask1 = generate_mask(gray, screen_tone_area_pattern_1)
-        processed_pil = apply_screen_tone(
-            processed_pil,
-            size=screen_tone_size_1,
-            pattern=screen_tone_pattern_1,
-            mask=mask1,
-            gray_image=gray,
-            color=screen_tone_color_1,
-            density=screen_tone_density_1,
-            pencil_style=pencil_shading_style_1
-        )
+        # สกรีนโทน Layer 2
+        if screen_tone_2 and screen_tone_pattern_2 != "None":
+            mask2 = generate_mask(gray, screen_tone_area_pattern_2)
+            processed_pil = apply_screen_tone(
+                processed_pil,
+                size=screen_tone_size_2,
+                pattern=screen_tone_pattern_2,
+                mask=mask2,
+                gray_image=gray,
+                color=screen_tone_color_2,
+                density=screen_tone_density_2,
+                pencil_style=pencil_shading_style_2
+            )
 
-    # สร้างมาสก์สำหรับ Screen Tone Layer 2
-    if screen_tone_2 and screen_tone_pattern_2 != "None":
-        mask2 = generate_mask(gray, screen_tone_area_pattern_2)
-        processed_pil = apply_screen_tone(
-            processed_pil,
-            size=screen_tone_size_2,
-            pattern=screen_tone_pattern_2,
-            mask=mask2,
-            gray_image=gray,
-            color=screen_tone_color_2,
-            density=screen_tone_density_2,
-            pencil_shading_style=pencil_shading_style_2
-        )
+        # เก็บภาพที่ประมวลผล
+        processed_image = processed_pil
 
-    # เก็บภาพที่ประมวลผล
-    processed_image = processed_pil
-
-    # คืนค่า Base64 สำหรับแสดงผล
-    return image_to_base64(processed_pil)
+        # คืนค่า Base64 สำหรับแสดงผล
+        logging.info("Image processed successfully.")
+        return image_to_base64(processed_pil)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -738,11 +620,12 @@ def index():
 
     if request.method == 'POST':
         # รับไฟล์ภาพจากผู้ใช้
-        file = request.files['image']
+        file = request.files.get('image')
         if file:
             try:
                 img = Image.open(file.stream)
-                img = ImageOps.exif_transpose(img)  # เพิ่มบรรทัดนี้เพื่อปรับการหมุนตาม EXIF
+                # หมุนภาพตาม EXIF
+                img = ImageOps.exif_transpose(img)
                 original_image = img.convert('RGB')
                 original_format = img.format
                 original_info = img.info
@@ -754,22 +637,31 @@ def index():
                                        screen_tone_area_patterns=screen_tone_area_patterns,
                                        pencil_shading_styles=pencil_shading_styles)
             except Exception as e:
-                return str(e)
+                logging.error(f"Error uploading image: {e}")
+                return f"Error uploading image: {e}", 400
+        else:
+            logging.error("No file part in the request.")
+            return "No file part in the request.", 400
     else:
-        return render_template('index.html', threshold_methods=threshold_methods,
+        return render_template('index.html',
+                               threshold_methods=threshold_methods,
                                noise_reduction_methods=noise_reduction_methods,
                                screen_tone_patterns=screen_tone_patterns,
                                screen_tone_area_patterns=screen_tone_area_patterns,
                                pencil_shading_styles=pencil_shading_styles)
 
 @app.route('/process', methods=['POST'])
-def process():
+def process_route():
     params = request.json
+    if not params:
+        logging.error("No parameters provided.")
+        return jsonify({'status': 'error', 'message': 'No parameters provided.'}), 400
+
     img_str = process_image(params)
     if img_str:
         return jsonify({'status': 'done', 'image': img_str})
     else:
-        return jsonify({'status': 'error'})
+        return jsonify({'status': 'error', 'message': 'Image processing failed.'}), 500
 
 @app.route('/save_image')
 def save_image():
@@ -781,7 +673,9 @@ def save_image():
         return send_file(buffered, mimetype='image/png', as_attachment=True,
                          download_name='processed_image.png')
     else:
+        logging.error("No image to save.")
         return 'No image to save.', 400
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
