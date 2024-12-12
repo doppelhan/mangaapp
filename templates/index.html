@@ -65,6 +65,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+        }
+
+        .image-box img {
+            max-width: 100%;
+            height: auto;
         }
 
         .image-box h2 {
@@ -269,10 +275,18 @@
 
     <div class="image-container">
         <div class="image-box">
+            {% if original_image %}
+            <img src="data:image/png;base64,{{ original_image }}" alt="Original Image">
+            {% else %}
             <h2>Original Image</h2>
+            {% endif %}
         </div>
         <div class="image-box">
+            {% if processed_image %}
+            <img src="data:image/png;base64,{{ processed_image }}" alt="Processed Image">
+            {% else %}
             <h2>Processed Image</h2>
+            {% endif %}
         </div>
     </div>
     {% endif %}
