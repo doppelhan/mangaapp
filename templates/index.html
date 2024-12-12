@@ -2,11 +2,11 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>โปรแกรมแปลงภาพสไตล์มังงะ</title>
+    <title>Manga Studio</title> <!-- เปลี่ยนชื่อโปรแกรม -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>โปรแกรมแปลงภาพสไตล์มังงะ</h1>
+    <h1>Manga Studio</h1> <!-- เปลี่ยนชื่อโปรแกรม -->
     <div id="controls">
         <form id="upload-form" action="/" method="post" enctype="multipart/form-data">
             <label for="image">เลือกภาพ:</label>
@@ -52,19 +52,19 @@
                         <label for="method">Thresholding Method:</label>
                         <select id="method" name="method">
                             {% for method in threshold_methods %}
-                            <option value="{{ method }}">{{ method }}</option>
+                            <option value="{{ method }}" {% if method == 'Special Adaptive Thresholding' %}selected{% endif %}>{{ method }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <!-- Block Size -->
                     <div class="parameter-item">
                         <label for="block_size">Block Size:</label>
-                        <input type="number" id="block_size" name="block_size" min="3" max="31" value="11">
+                        <input type="number" id="block_size" name="block_size" min="3" max="31" value="11"> <!-- ตั้งค่าเริ่มต้นเป็น 11 -->
                     </div>
                     <!-- C Value -->
                     <div class="parameter-item">
                         <label for="c_value">C Value:</label>
-                        <input type="number" id="c_value" name="c_value" min="-20" max="20" value="2">
+                        <input type="number" id="c_value" name="c_value" min="-20" max="20" value="6"> <!-- ตั้งค่าเริ่มต้นเป็น 6 -->
                     </div>
                     <!-- Invert -->
                     <div class="parameter-item">
@@ -147,7 +147,7 @@
                     <!-- Size -->
                     <div class="parameter-item">
                         <label for="screen_tone_size_1">Size:</label>
-                        <input type="number" id="screen_tone_size_1" name="screen_tone_size_1" min="1" max="20" value="5">
+                        <input type="number" id="screen_tone_size_1" name="screen_tone_size_1" min="1" max="50" value="50"> <!-- ตั้งค่าเริ่มต้นเป็น 50 และปรับ max -->
                     </div>
                     <!-- Density -->
                     <div class="parameter-item">
@@ -199,7 +199,7 @@
                     <!-- Size -->
                     <div class="parameter-item">
                         <label for="screen_tone_size_2">Size:</label>
-                        <input type="number" id="screen_tone_size_2" name="screen_tone_size_2" min="1" max="20" value="7">
+                        <input type="number" id="screen_tone_size_2" name="screen_tone_size_2" min="1" max="50" value="50"> <!-- ตั้งค่าเริ่มต้นเป็น 50 และปรับ max -->
                     </div>
                     <!-- Density -->
                     <div class="parameter-item">
