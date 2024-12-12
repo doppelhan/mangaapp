@@ -76,6 +76,8 @@
         .image-box h2 {
             font-size: 1.2em;
             color: #666;
+            text-align: center;
+            margin: 0;
         }
     </style>
 </head>
@@ -87,7 +89,7 @@
             <input type="submit" value="Upload">
         </form>
     </div>
-    {% if original_image %}
+    {% if original_image is defined %}
     <form id="parameters-form">
         <div class="container">
             <!-- Basic Settings -->
@@ -275,15 +277,15 @@
 
     <div class="image-container">
         <div class="image-box">
-            {% if original_image %}
-            <img src="data:image/png;base64,{{ original_image }}" alt="Original Image">
+            {% if original_image is defined and original_image %}
+            <img src="data:image/png;base64,{{ original_image|safe }}" alt="Original Image">
             {% else %}
             <h2>Original Image</h2>
             {% endif %}
         </div>
         <div class="image-box">
-            {% if processed_image %}
-            <img src="data:image/png;base64,{{ processed_image }}" alt="Processed Image">
+            {% if processed_image is defined and processed_image %}
+            <img src="data:image/png;base64,{{ processed_image|safe }}" alt="Processed Image">
             {% else %}
             <h2>Processed Image</h2>
             {% endif %}
