@@ -1,71 +1,81 @@
+/* static/styles.css */
+
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
+    background-color: #f4f4f4;
 }
 
-#controls {
+h1, h2, h3 {
+    color: #333;
+    text-align: center;
+}
+
+#controls, #parameters, #images {
+    background-color: #fff;
+    padding: 20px;
     margin-bottom: 20px;
-}
-
-#parameters {
-    margin-bottom: 20px;
-}
-
-.parameter-row {
-    display: flex;
-    flex-wrap: wrap;
+    border-radius: 5px;
 }
 
 .parameter-group {
-    flex: 1;
-    min-width: 300px;
-    margin-right: 10px;
-    border: 1px solid #ccc;
-    padding: 10px;
-    box-sizing: border-box;
-}
-
-.parameter-group h3 {
-    margin-top: 0;
+    margin-bottom: 20px;
 }
 
 .parameter-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
 }
 
 .parameter-item label {
-    width: 150px;
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
-.parameter-item input,
-.parameter-item select {
-    flex: 1;
+.parameter-item input[type="number"],
+.parameter-item select,
+.parameter-item input[type="color"] {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
 }
 
 .button-group {
-    margin-top: 10px;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.button-group button {
+    padding: 10px 20px;
+    margin: 0 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 16px;
+}
+
+.button-group button:hover {
+    background-color: #218838;
 }
 
 #images {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    justify-content: space-around;
+    flex-wrap: wrap;
 }
 
 #images div {
-    flex: 1;
-    margin-right: 10px;
+    width: 45%;
+    text-align: center;
 }
 
 #images img {
-    width: 100%;
+    max-width: 100%;
     height: auto;
-    max-height: 80vh;
-    object-fit: contain;
-}
-
-#images h2 {
-    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 5px;
+    background-color: #fff;
 }
