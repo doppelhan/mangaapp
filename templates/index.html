@@ -2,294 +2,252 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Manga Studio</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1 {
-            text-align: center;
-        }
-        #controls {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        #controls input[type="file"] {
-            margin-right: 10px;
-        }
-
-        .container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .group-box {
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        .parameter-item {
-            margin-bottom: 10px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        input[type="number"], select, input[type="color"], input[type="text"] {
-            width: 100%;
-            padding: 5px;
-            box-sizing: border-box;
-        }
-
-        .button-group {
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .image-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-gap: 20px;
-        }
-
-        .image-box {
-            border: 1px solid #ccc;
-            height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .image-box img {
-            max-width: 100%;
-            height: auto;
-            image-orientation: from-image;
-        }
-
-        .image-box h2 {
-            font-size: 1.2em;
-            color: #666;
-            text-align: center;
-            margin: 0;
-        }
-    </style>
+    <title>โปรแกรมแปลงภาพสไตล์มังงะ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Manga Studio</h1>
+    <h1>โปรแกรมแปลงภาพสไตล์มังงะ</h1>
     <div id="controls">
-        <form method="POST" enctype="multipart/form-data">
-            <input type="file" name="image" accept="image/*" required>
-            <input type="submit" value="Upload">
+        <form id="upload-form" action="/" method="post" enctype="multipart/form-data">
+            <label for="image">เลือกภาพ:</label>
+            <input type="file" id="image" name="image" accept="image/*" required>
+            <input type="submit" value="อัปโหลด">
         </form>
     </div>
-    {% if original_image is defined %}
-    <form id="parameters-form">
-        <div class="container">
-            <!-- Basic Settings -->
-            <div class="group-box">
-                <h3>Basic Settings</h3>
-                <div class="parameter-item">
-                    <label for="method">Thresholding Method:</label>
-                    <select id="method" name="method">
-                        {% for m in threshold_methods|default([]) %}
-                        <option value="{{ m }}">{{ m }}</option>
-                        {% endfor %}
-                    </select>
+    {% if original_image %}
+    <div id="parameters">
+        <!-- ฟอร์มสำหรับพารามิเตอร์ต่าง ๆ -->
+        <form id="parameters-form">
+            <div class="parameter-row">
+                <!-- การตั้งค่าพื้นฐาน -->
+                <div class="parameter-group">
+                    <h3>การตั้งค่าพื้นฐาน</h3>
+                    <!-- Threshold -->
+                    <div class="parameter-item">
+                        <label for="threshold">Threshold:</label>
+                        <input type="number" id="threshold" name="threshold" min="0" max="255" value="128">
+                    </div>
+                    <!-- Contrast -->
+                    <div class="parameter-item">
+                        <label for="contrast">Contrast:</label>
+                        <input type="number" id="contrast" name="contrast" step="0.1" value="1.0">
+                    </div>
+                    <!-- Brightness -->
+                    <div class="parameter-item">
+                        <label for="brightness">Brightness:</label>
+                        <input type="number" id="brightness" name="brightness" step="0.1" value="1.0">
+                    </div>
+                    <!-- Gamma -->
+                    <div class="parameter-item">
+                        <label for="gamma">Gamma:</label>
+                        <input type="number" id="gamma" name="gamma" step="0.1" value="1.0">
+                    </div>
+                    <!-- Exposure -->
+                    <div class="parameter-item">
+                        <label for="exposure">Exposure:</label>
+                        <input type="number" id="exposure" name="exposure" step="0.1" value="1.0">
+                    </div>
+                    <!-- Method -->
+                    <div class="parameter-item">
+                        <label for="method">Thresholding Method:</label>
+                        <select id="method" name="method">
+                            {% for method in threshold_methods %}
+                            <option value="{{ method }}" {% if method == 'Special Adaptive Threshold' %}selected{% endif %}>{{ method }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Block Size -->
+                    <div class="parameter-item">
+                        <label for="block_size">Block Size:</label>
+                        <input type="number" id="block_size" name="block_size" min="3" max="31" value="11">
+                    </div>
+                    <!-- C Value -->
+                    <div class="parameter-item">
+                        <label for="c_value">C Value:</label>
+                        <input type="number" id="c_value" name="c_value" min="-20" max="20" value="6">
+                    </div>
+                    <!-- Invert -->
+                    <div class="parameter-item">
+                        <label for="invert">Invert Colors:</label>
+                        <input type="checkbox" id="invert" name="invert">
+                    </div>
                 </div>
-                <div class="parameter-item">
-                    <label for="threshold">Threshold:</label>
-                    <input type="number" id="threshold" name="threshold" min="0" max="255" value="128">
+
+                <!-- การปรับปรุงภาพ -->
+                <div class="parameter-group">
+                    <h3>การปรับปรุงภาพ</h3>
+                    <!-- Noise Reduction -->
+                    <div class="parameter-item">
+                        <label for="noise_reduction">Noise Reduction:</label>
+                        <select id="noise_reduction" name="noise_reduction">
+                            {% for method in noise_reduction_methods %}
+                            <option value="{{ method }}">{{ method }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Sharpen -->
+                    <div class="parameter-item">
+                        <label for="sharpen">Sharpen:</label>
+                        <input type="checkbox" id="sharpen" name="sharpen">
+                    </div>
+                    <!-- Edge Enhance -->
+                    <div class="parameter-item">
+                        <label for="edge_enhance">Edge Enhance:</label>
+                        <input type="checkbox" id="edge_enhance" name="edge_enhance">
+                    </div>
+                    <!-- Histogram Equalization -->
+                    <div class="parameter-item">
+                        <label for="hist_eq">Histogram Equalization:</label>
+                        <input type="checkbox" id="hist_eq" name="hist_eq">
+                    </div>
+                    <!-- CLAHE -->
+                    <div class="parameter-item">
+                        <label for="clahe">CLAHE:</label>
+                        <input type="checkbox" id="clahe" name="clahe">
+                    </div>
+                    <!-- Clip Limit -->
+                    <div class="parameter-item">
+                        <label for="clip_limit">Clip Limit:</label>
+                        <input type="number" id="clip_limit" name="clip_limit" step="0.5" value="2.0">
+                    </div>
+                    <!-- Tile Grid Size -->
+                    <div class="parameter-item">
+                        <label for="tile_grid_size">Tile Grid Size:</label>
+                        <input type="number" id="tile_grid_size" name="tile_grid_size" min="1" max="16" value="8">
+                    </div>
+                    <!-- Local Contrast -->
+                    <div class="parameter-item">
+                        <label for="local_contrast">Local Contrast:</label>
+                        <input type="checkbox" id="local_contrast" name="local_contrast">
+                    </div>
+                    <!-- Kernel Size -->
+                    <div class="parameter-item">
+                        <label for="kernel_size">Kernel Size:</label>
+                        <input type="number" id="kernel_size" name="kernel_size" min="3" max="31" value="9">
+                    </div>
                 </div>
-                <div class="parameter-item">
-                    <label for="contrast">Contrast:</label>
-                    <input type="number" id="contrast" name="contrast" step="0.1" value="1.0">
+
+                <!-- Screen Tone Layer 1 -->
+                <div class="parameter-group">
+                    <h3>Screen Tone Layer 1</h3>
+                    <!-- Enable -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_1">Enable:</label>
+                        <input type="checkbox" id="screen_tone_1" name="screen_tone_1">
+                    </div>
+                    <!-- Pattern -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_pattern_1">Pattern:</label>
+                        <select id="screen_tone_pattern_1" name="screen_tone_pattern_1">
+                            {% for pattern in screen_tone_patterns %}
+                            <option value="{{ pattern }}">{{ pattern }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Size -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_size_1">Size:</label>
+                        <input type="number" id="screen_tone_size_1" name="screen_tone_size_1" min="1" max="20" value="3">
+                    </div>
+                    <!-- Density -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_density_1">Density:</label>
+                        <input type="number" id="screen_tone_density_1" name="screen_tone_density_1" min="0" max="100" value="50">
+                    </div>
+                    <!-- Area Pattern -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_area_pattern_1">Area Pattern:</label>
+                        <select id="screen_tone_area_pattern_1" name="screen_tone_area_pattern_1">
+                            {% for pattern in screen_tone_area_patterns %}
+                            <option value="{{ pattern }}">{{ pattern }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Pencil Shading Style -->
+                    <div class="parameter-item">
+                        <label for="pencil_shading_style_1">Pencil Shading Style:</label>
+                        <select id="pencil_shading_style_1" name="pencil_shading_style_1">
+                            {% for style in pencil_shading_styles %}
+                            <option value="{{ style }}">{{ style }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Color -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_color_1">Color:</label>
+                        <input type="color" id="screen_tone_color_1" name="screen_tone_color_1" value="#323232">
+                    </div>
                 </div>
-                <div class="parameter-item">
-                    <label for="brightness">Brightness:</label>
-                    <input type="number" id="brightness" name="brightness" step="0.1" value="1.0">
-                </div>
-                <div class="parameter-item">
-                    <label for="gamma">Gamma:</label>
-                    <input type="number" id="gamma" name="gamma" step="0.1" value="1.0">
-                </div>
-                <div class="parameter-item">
-                    <label for="exposure">Exposure:</label>
-                    <input type="number" id="exposure" name="exposure" step="0.1" value="1.0">
-                </div>
-                <div class="parameter-item">
-                    <label for="block_size">Block Size:</label>
-                    <input type="number" id="block_size" name="block_size" min="3" max="31" value="11">
-                </div>
-                <div class="parameter-item">
-                    <label for="c_value">C Value:</label>
-                    <input type="number" id="c_value" name="c_value" min="-20" max="20" value="6">
+
+                <!-- Screen Tone Layer 2 -->
+                <div class="parameter-group">
+                    <h3>Screen Tone Layer 2</h3>
+                    <!-- Enable -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_2">Enable:</label>
+                        <input type="checkbox" id="screen_tone_2" name="screen_tone_2">
+                    </div>
+                    <!-- Pattern -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_pattern_2">Pattern:</label>
+                        <select id="screen_tone_pattern_2" name="screen_tone_pattern_2">
+                            {% for pattern in screen_tone_patterns %}
+                            <option value="{{ pattern }}">{{ pattern }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Size -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_size_2">Size:</label>
+                        <input type="number" id="screen_tone_size_2" name="screen_tone_size_2" min="1" max="20" value="3">
+                    </div>
+                    <!-- Density -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_density_2">Density:</label>
+                        <input type="number" id="screen_tone_density_2" name="screen_tone_density_2" min="0" max="100" value="70">
+                    </div>
+                    <!-- Area Pattern -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_area_pattern_2">Area Pattern:</label>
+                        <select id="screen_tone_area_pattern_2" name="screen_tone_area_pattern_2">
+                            {% for pattern in screen_tone_area_patterns %}
+                            <option value="{{ pattern }}">{{ pattern }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Pencil Shading Style -->
+                    <div class="parameter-item">
+                        <label for="pencil_shading_style_2">Pencil Shading Style:</label>
+                        <select id="pencil_shading_style_2" name="pencil_shading_style_2">
+                            {% for style in pencil_shading_styles %}
+                            <option value="{{ style }}">{{ style }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Color -->
+                    <div class="parameter-item">
+                        <label for="screen_tone_color_2">Color:</label>
+                        <input type="color" id="screen_tone_color_2" name="screen_tone_color_2" value="#505050">
+                    </div>
                 </div>
             </div>
 
-            <!-- Image Enhancement -->
-            <div class="group-box">
-                <h3>Image Enhancement</h3>
-                <div class="parameter-item">
-                    <label for="noise_reduction">Noise Reduction:</label>
-                    <select id="noise_reduction" name="noise_reduction">
-                        {% for nr in noise_reduction_methods|default([]) %}
-                        <option value="{{ nr }}">{{ nr }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="parameter-item">
-                    <label for="sharpen">Sharpen:</label>
-                    <input type="checkbox" id="sharpen" name="sharpen">
-                </div>
-                <div class="parameter-item">
-                    <label for="edge_enhance">Edge Enhance:</label>
-                    <input type="checkbox" id="edge_enhance" name="edge_enhance">
-                </div>
-                <div class="parameter-item">
-                    <label for="hist_eq">Histogram Equalization:</label>
-                    <input type="checkbox" id="hist_eq" name="hist_eq">
-                </div>
-                <div class="parameter-item">
-                    <label for="clahe">CLAHE:</label>
-                    <input type="checkbox" id="clahe" name="clahe">
-                </div>
-                <div class="parameter-item">
-                    <label for="clip_limit">Clip Limit:</label>
-                    <input type="number" id="clip_limit" name="clip_limit" step="0.5" value="2.0">
-                </div>
-                <div class="parameter-item">
-                    <label for="tile_grid_size">Tile Grid Size:</label>
-                    <input type="number" id="tile_grid_size" name="tile_grid_size" min="1" max="16" value="8">
-                </div>
-                <div class="parameter-item">
-                    <label for="local_contrast">Local Contrast:</label>
-                    <input type="checkbox" id="local_contrast" name="local_contrast">
-                </div>
-                <div class="parameter-item">
-                    <label for="kernel_size">Kernel Size:</label>
-                    <input type="number" id="kernel_size" name="kernel_size" min="3" max="31" value="9">
-                </div>
+            <div class="button-group">
+                <button type="button" id="process-btn">ประมวลผลภาพ</button>
+                <!-- ปุ่มบันทึกภาพ -->
+                <button type="button" id="save-btn">บันทึกภาพ</button>
             </div>
+        </form>
+    </div>
 
-            <!-- Screentone 1 -->
-            <div class="group-box">
-                <h3>Screentone 1</h3>
-                <div class="parameter-item">
-                    <label for="screen_tone_1">Enable:</label>
-                    <input type="checkbox" id="screen_tone_1" name="screen_tone_1">
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_pattern_1">Pattern:</label>
-                    <select id="screen_tone_pattern_1" name="screen_tone_pattern_1">
-                        {% for pattern in screen_tone_patterns|default([]) %}
-                        <option value="{{ pattern }}" {% if pattern == 'Pencil Shading' %}selected{% endif %}>{{ pattern }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_size_1">Size:</label>
-                    <input type="number" id="screen_tone_size_1" name="screen_tone_size_1" min="1" max="50" value="3">
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_density_1">Density:</label>
-                    <input type="number" id="screen_tone_density_1" name="screen_tone_density_1" min="0" max="100" value="50">
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_area_pattern_1">Area Pattern:</label>
-                    <select id="screen_tone_area_pattern_1" name="screen_tone_area_pattern_1">
-                        {% for ap in screen_tone_area_patterns|default([]) %}
-                        <option value="{{ ap }}" {% if ap == 'Global Darkness' %}selected{% endif %}>{{ ap }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="parameter-item">
-                    <label for="pencil_shading_style_1">Pencil Shading Style:</label>
-                    <select id="pencil_shading_style_1" name="pencil_shading_style_1">
-                        {% for style in pencil_shading_styles|default([]) %}
-                        <option value="{{ style }}" {% if style == 'Hatched' %}selected{% endif %}>{{ style }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_color_1">Color:</label>
-                    <input type="color" id="screen_tone_color_1" name="screen_tone_color_1" value="#323232">
-                </div>
-            </div>
-
-            <!-- Screentone 2 -->
-            <div class="group-box">
-                <h3>Screentone 2</h3>
-                <div class="parameter-item">
-                    <label for="screen_tone_2">Enable:</label>
-                    <input type="checkbox" id="screen_tone_2" name="screen_tone_2">
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_pattern_2">Pattern:</label>
-                    <select id="screen_tone_pattern_2" name="screen_tone_pattern_2">
-                        {% for pattern in screen_tone_patterns|default([]) %}
-                        <option value="{{ pattern }}" {% if pattern == 'Pencil Shading' %}selected{% endif %}>{{ pattern }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_size_2">Size:</label>
-                    <input type="number" id="screen_tone_size_2" name="screen_tone_size_2" min="1" max="50" value="3">
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_density_2">Density:</label>
-                    <input type="number" id="screen_tone_density_2" name="screen_tone_density_2" min="0" max="100" value="50">
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_area_pattern_2">Area Pattern:</label>
-                    <select id="screen_tone_area_pattern_2" name="screen_tone_area_pattern_2">
-                        {% for ap in screen_tone_area_patterns|default([]) %}
-                        <option value="{{ ap }}" {% if ap == 'Mid-tone Regions' %}selected{% endif %}>{{ ap }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="parameter-item">
-                    <label for="pencil_shading_style_2">Pencil Shading Style:</label>
-                    <select id="pencil_shading_style_2" name="pencil_shading_style_2">
-                        {% for style in pencil_shading_styles|default([]) %}
-                        <option value="{{ style }}" {% if style == 'Hatched' %}selected{% endif %}>{{ style }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="parameter-item">
-                    <label for="screen_tone_color_2">Color:</label>
-                    <input type="color" id="screen_tone_color_2" name="screen_tone_color_2" value="#505050">
-                </div>
-            </div>
+    <div id="images">
+        <div id="original-image">
+            <h2>ภาพต้นฉบับ</h2>
+            <img src="data:image/png;base64,{{ original_image }}" alt="ภาพต้นฉบับ">
         </div>
-
-        <div class="button-group">
-            <button type="button" id="process-btn">Convert</button>
-            <button type="button" id="save-btn">Save</button>
-        </div>
-    </form>
-
-    <div class="image-container">
-        <div class="image-box">
-            {% if original_image is defined and original_image %}
-            <img src="data:image/png;base64,{{ original_image|safe }}" alt="Original Image">
-            {% else %}
-            <h2>Original Image</h2>
-            {% endif %}
-        </div>
-        <div class="image-box">
-            {% if processed_image is defined and processed_image %}
-            <img src="data:image/png;base64,{{ processed_image|safe }}" alt="Processed Image">
-            {% else %}
-            <h2>Processed Image</h2>
-            {% endif %}
+        <div id="processed-image">
+            <h2>ภาพที่ประมวลผล</h2>
+            <img src="" alt="ภาพที่ประมวลผล" id="result-image">
         </div>
     </div>
     {% endif %}
