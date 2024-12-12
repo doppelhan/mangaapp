@@ -71,6 +71,7 @@
         .image-box img {
             max-width: 100%;
             height: auto;
+            image-orientation: from-image;
         }
 
         .image-box h2 {
@@ -98,7 +99,7 @@
                 <div class="parameter-item">
                     <label for="method">Thresholding Method:</label>
                     <select id="method" name="method">
-                        {% for m in threshold_methods %}
+                        {% for m in threshold_methods|default([]) %}
                         <option value="{{ m }}">{{ m }}</option>
                         {% endfor %}
                     </select>
@@ -139,7 +140,7 @@
                 <div class="parameter-item">
                     <label for="noise_reduction">Noise Reduction:</label>
                     <select id="noise_reduction" name="noise_reduction">
-                        {% for nr in noise_reduction_methods %}
+                        {% for nr in noise_reduction_methods|default([]) %}
                         <option value="{{ nr }}">{{ nr }}</option>
                         {% endfor %}
                     </select>
@@ -188,7 +189,7 @@
                 <div class="parameter-item">
                     <label for="screen_tone_pattern_1">Pattern:</label>
                     <select id="screen_tone_pattern_1" name="screen_tone_pattern_1">
-                        {% for pattern in screen_tone_patterns %}
+                        {% for pattern in screen_tone_patterns|default([]) %}
                         <option value="{{ pattern }}" {% if pattern == 'Pencil Shading' %}selected{% endif %}>{{ pattern }}</option>
                         {% endfor %}
                     </select>
@@ -204,7 +205,7 @@
                 <div class="parameter-item">
                     <label for="screen_tone_area_pattern_1">Area Pattern:</label>
                     <select id="screen_tone_area_pattern_1" name="screen_tone_area_pattern_1">
-                        {% for ap in screen_tone_area_patterns %}
+                        {% for ap in screen_tone_area_patterns|default([]) %}
                         <option value="{{ ap }}" {% if ap == 'Global Darkness' %}selected{% endif %}>{{ ap }}</option>
                         {% endfor %}
                     </select>
@@ -212,7 +213,7 @@
                 <div class="parameter-item">
                     <label for="pencil_shading_style_1">Pencil Shading Style:</label>
                     <select id="pencil_shading_style_1" name="pencil_shading_style_1">
-                        {% for style in pencil_shading_styles %}
+                        {% for style in pencil_shading_styles|default([]) %}
                         <option value="{{ style }}" {% if style == 'Hatched' %}selected{% endif %}>{{ style }}</option>
                         {% endfor %}
                     </select>
@@ -233,7 +234,7 @@
                 <div class="parameter-item">
                     <label for="screen_tone_pattern_2">Pattern:</label>
                     <select id="screen_tone_pattern_2" name="screen_tone_pattern_2">
-                        {% for pattern in screen_tone_patterns %}
+                        {% for pattern in screen_tone_patterns|default([]) %}
                         <option value="{{ pattern }}" {% if pattern == 'Pencil Shading' %}selected{% endif %}>{{ pattern }}</option>
                         {% endfor %}
                     </select>
@@ -249,7 +250,7 @@
                 <div class="parameter-item">
                     <label for="screen_tone_area_pattern_2">Area Pattern:</label>
                     <select id="screen_tone_area_pattern_2" name="screen_tone_area_pattern_2">
-                        {% for ap in screen_tone_area_patterns %}
+                        {% for ap in screen_tone_area_patterns|default([]) %}
                         <option value="{{ ap }}" {% if ap == 'Mid-tone Regions' %}selected{% endif %}>{{ ap }}</option>
                         {% endfor %}
                     </select>
@@ -257,7 +258,7 @@
                 <div class="parameter-item">
                     <label for="pencil_shading_style_2">Pencil Shading Style:</label>
                     <select id="pencil_shading_style_2" name="pencil_shading_style_2">
-                        {% for style in pencil_shading_styles %}
+                        {% for style in pencil_shading_styles|default([]) %}
                         <option value="{{ style }}" {% if style == 'Hatched' %}selected{% endif %}>{{ style }}</option>
                         {% endfor %}
                     </select>
