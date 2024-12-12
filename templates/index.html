@@ -52,7 +52,7 @@
                         <label for="method">Thresholding Method:</label>
                         <select id="method" name="method">
                             {% for method in threshold_methods %}
-                            <option value="{{ method }}" {% if method == 'Special Adaptive Threshold' %}selected{% endif %}>{{ method }}</option>
+                            <option value="{{ method }}" {% if method == 'Special Adaptive Thresholding' %}selected{% endif %}>{{ method }}</option>
                             {% endfor %}
                         </select>
                     </div>
