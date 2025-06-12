@@ -723,7 +723,7 @@ def process_image(params):
             gray_image=gray,
             color=screen_tone_color_2,
             density=screen_tone_density_2,
-            pencil_shading_style=pencil_shading_style_2
+            pencil_style=pencil_shading_style_2
         )
 
     # เก็บภาพที่ประมวลผล
