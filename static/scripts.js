@@ -6,10 +6,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultImage = document.getElementById('result-image');
     const parametersForm = document.getElementById('parameters-form');
 
-    processBtn.addEventListener('click', function() {
-        // สร้าง FormData จากแบบฟอร์มพารามิเตอร์
-        const formData = new FormData(parametersForm);
-        const params = {};
+    if (processBtn && parametersForm && resultImage) {
+        processBtn.addEventListener('click', function() {
+            // สร้าง FormData จากแบบฟอร์มพารามิเตอร์
+            const formData = new FormData(parametersForm);
+            const params = {};
 
         formData.forEach((value, key) => {
             // แปลงค่าต่าง ๆ ให้เป็นชนิดข้อมูลที่ถูกต้อง
@@ -44,14 +45,18 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             alert('เกิดข้อผิดพลาดในการประมวลผลภาพ');
         });
+        
     });
+    }
 
-    saveBtn.addEventListener('click', function() {
-        // ตรวจสอบว่ามีภาพที่ประมวลผลอยู่หรือไม่
-        if (resultImage.src) {
-            window.location.href = '/save_image';
-        } else {
-            alert('ยังไม่มีภาพที่ประมวลผลให้บันทึก');
-        }
-    });
+    if (saveBtn && resultImage) {
+        saveBtn.addEventListener('click', function() {
+            // ตรวจสอบว่ามีภาพที่ประมวลผลอยู่หรือไม่
+            if (resultImage.src) {
+                window.location.href = '/save_image';
+            } else {
+                alert('ยังไม่มีภาพที่ประมวลผลให้บันทึก');
+            }
+        });
+    }
 });
