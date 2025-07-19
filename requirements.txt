@@ -3,3 +3,4 @@ gunicorn
 Pillow
 opencv-python-headless
 numpy
+pytest
