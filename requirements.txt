@@ -3,3 +3,5 @@ gunicorn
 Pillow
 opencv-python-headless
 numpy
+Werkzeug
+# cupy-cuda12x  # Uncomment this and install if you have NVIDIA GPU + CUDA 12.x
