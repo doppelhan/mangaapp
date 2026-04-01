@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Manga Studio FX</title>
+    <!-- Fallback if CSS isn't present to avoid 404, we just use a basic inline setup or link normally -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -18,6 +19,7 @@
     <div id="parameters">
         <!-- ฟอร์มสำหรับพารามิเตอร์ต่าง ๆ -->
         <form id="parameters-form">
+            <input type="hidden" id="session_id" name="session_id" value="{{ session_id }}">
             <div class="parameter-row">
                 <!-- การตั้งค่าพื้นฐาน -->
                 <div class="parameter-group">
@@ -251,6 +253,63 @@
         </div>
     </div>
     {% endif %}
-    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+    <!-- Update the script source since we modified the logic in python slightly, we need to pass session_id if available -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const processBtn = document.getElementById('process-btn');
+            const saveBtn = document.getElementById('save-btn');
+
+            if (processBtn) {
+                processBtn.addEventListener('click', () => {
+                    const form = document.getElementById('parameters-form');
+                    const formData = new FormData(form);
+                    const params = {};
+
+                    // Add checkboxes
+                    params['invert'] = document.getElementById('invert').checked ? 'true' : 'false';
+                    params['sharpen'] = document.getElementById('sharpen').checked ? 'true' : 'false';
+                    params['edge_enhance'] = document.getElementById('edge_enhance').checked ? 'true' : 'false';
+                    params['hist_eq'] = document.getElementById('hist_eq').checked ? 'true' : 'false';
+                    params['clahe'] = document.getElementById('clahe').checked ? 'true' : 'false';
+                    params['local_contrast'] = document.getElementById('local_contrast').checked ? 'true' : 'false';
+                    params['screen_tone_1'] = document.getElementById('screen_tone_1').checked ? 'true' : 'false';
+                    params['screen_tone_2'] = document.getElementById('screen_tone_2').checked ? 'true' : 'false';
+
+                    for (let [key, value] of formData.entries()) {
+                        if (key !== 'invert' && key !== 'sharpen' && key !== 'edge_enhance' && key !== 'hist_eq' && key !== 'clahe' && key !== 'local_contrast' && key !== 'screen_tone_1' && key !== 'screen_tone_2') {
+                            params[key] = value;
+                        }
+                    }
+
+                    fetch('/process', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(params)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'done') {
+                            document.getElementById('result-image').src = 'data:image/png;base64,' + data.image;
+                        } else {
+                            alert('เกิดข้อผิดพลาดในการประมวลผล: ' + (data.message || ''));
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+                    });
+                });
+            }
+
+            if (saveBtn) {
+                saveBtn.addEventListener('click', () => {
+                    const sessionId = document.getElementById('session_id').value;
+                    window.location.href = '/save_image?session_id=' + sessionId;
+                });
+            }
+        });
+    </script>
 </body>
 </html>
